@@ -29,6 +29,5 @@ while True:
         ltc_books.insert_one(book)
 
     time_delta = time.time()-start
-    print time_delta
-    # if time_delta < 1.0:
-    #     time.sleep(1-time_delta)
+    if time_delta < 1.0:
+        time.sleep(1-time_delta)
