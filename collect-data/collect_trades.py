@@ -16,9 +16,9 @@ def get_json(url):
     resp = urllib2.urlopen(url)
     return json.load(resp), resp.getcode()
 
-last = 0
+last = 1
 while True:
-    url = '{0}/trades/{1}?timestamp={2}&limit_trades={2}'.format(api, symbol,
+    url = '{0}/trades/{1}?timestamp={2}&limit_trades={3}'.format(api, symbol,
                                                                  last, limit)
 
     trades, code = get_json(url)
@@ -28,7 +28,7 @@ while True:
         for trade in trades:
             trade['_id'] = trade.pop('tid')
             ltc_trades.update_one({'_id': trade['_id']},
-                                  {'$set': trade}, upsert=True)
+                                  {'$setOnInsert': trade}, upsert=True)
 
     last = trades[0]['timestamp'] - 5
-    time.sleep(300)
+    time.sleep(60)
