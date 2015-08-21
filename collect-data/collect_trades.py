@@ -2,14 +2,15 @@ import urllib2
 import time
 import json
 from pymongo import MongoClient
+import sys
 
 api = 'https://api.bitfinex.com/v1'
-symbol = 'ltcusd'
+symbol = sys.argv[1]
 limit = 1000
 
 client = MongoClient()
 db = client['bitmicro']
-ltc_trades = db['ltc_trades']
+ltc_trades = db[symbol+'_trades']
 
 
 def format_trade(trade):
@@ -29,8 +30,8 @@ def get_json(url):
 
 last = 0
 while True:
-    url = '{0}/trades/{1}?timestamp={2}&limit_trades={3}'.format(api, symbol,
-                                                                 last, limit)
+    url = '{0}/trades/{1}usd?timestamp={2}&limit_trades={3}'.format(api, symbol,
+                                                                    last, limit)
 
     trades, code = get_json(url)
     if code != 200:

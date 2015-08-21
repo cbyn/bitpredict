@@ -2,15 +2,16 @@ import urllib2
 import time
 import json
 from pymongo import MongoClient
+import sys
 
 api = 'https://api.bitfinex.com/v1'
-symbol = 'ltcusd'
+symbol = sys.argv[1]
 limit = 25
-book_url = '{0}/book/{1}?limit_bids={2}&limit_asks={2}'.format(api,
-                                                               symbol, limit)
+book_url = '{0}/book/{1}usd?limit_bids={2}&limit_asks={2}'.format(api, symbol,
+                                                                  limit)
 client = MongoClient()
 db = client['bitmicro']
-ltc_books = db['ltc_books']
+ltc_books = db[symbol+'_books']
 
 
 def format_book_entry(entry):
