@@ -28,18 +28,22 @@ def get_json(url):
     return json.load(resp, object_hook=format_trade), resp.getcode()
 
 
-last = 0
+print 'Running...'
+last_timestamp = 0
 while True:
-    url = '{0}/trades/{1}usd?timestamp={2}&limit_trades={3}'.format(api, symbol,
-                                                                    last, limit)
-
-    trades, code = get_json(url)
-    if code != 200:
-        print code
+    url = '{0}/trades/{1}usd?timestamp={2}&limit_trades={3}'\
+        .format(api, symbol, last_timestamp, limit)
+    try:
+        trades, code = get_json(url)
+    except Exception as e:
+        print e
+        sys.exc_clear()
     else:
-        for trade in trades:
-            ltc_trades.update_one({'_id': trade['_id']},
-                                  {'$setOnInsert': trade}, upsert=True)
-
-    last = trades[0]['timestamp'] - 5
-    time.sleep(60)
+        if code != 200:
+            print code
+        else:
+            for trade in trades:
+                ltc_trades.update_one({'_id': trade['_id']},
+                                      {'$setOnInsert': trade}, upsert=True)
+            last_timestamp = trades[0]['timestamp'] - 5
+            time.sleep(60)
