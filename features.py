@@ -1,5 +1,6 @@
 import pymongo
 import pandas as pd
+from math import log
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -20,7 +21,8 @@ def get_book_df(symbol, limit, convert_timestamps=False):
 
 def get_width_and_mid(books):
     '''
-    Returns width of best market and midpoint for DataFrame of book data
+    Returns width of best market and midpoint for each data point in
+    DataFrame of book data
     '''
     best_bid = books.bids.apply(lambda x: x.price[0])
     best_ask = books.asks.apply(lambda x: x.price[0])
@@ -29,7 +31,7 @@ def get_width_and_mid(books):
 
 def get_future_mid(books, offset, sensitivity):
     '''
-    Returns future midpoints for DataFrame of book data
+    Returns future midpoints for each data point in DataFrame of book data
     '''
     def future(timestamp):
         i = books.index.get_loc(timestamp+offset, method='nearest')
@@ -39,10 +41,11 @@ def get_future_mid(books, offset, sensitivity):
 
 
 def get_imbalance(books):
-    '''
-    Returns imbalances between bids and offers for DataFrame of book data
-    '''
     # TODO: account for distance from mid
+    '''
+    Returns imbalances between bids and offers for each data point in
+    DataFrame of book data
+    '''
     total_bid_size = books.bids.apply(lambda x: x.amount.sum())
     total_ask_size = books.asks.apply(lambda x: x.amount.sum())
     return total_bid_size - total_ask_size
@@ -53,13 +56,34 @@ def get_trade_df(symbol, min_ts, max_ts, convert_timestamps=False):
     Returns a DataFrame of trades for symbol in time range
     '''
     trades_db = db[symbol+'_trades']
-    query = {'timestamp': {'$gt': min_ts}, 'timestamp': {'$lt': max_ts}}
+    query = {'timestamp': {'$gt': min_ts, '$lt': max_ts}}
     cursor = trades_db.find(query).sort('_id', pymongo.ASCENDING)
     trades = pd.DataFrame(list(cursor))
-    trades = trades.set_index('timestamp')
+    trades = trades.set_index('_id')
     if convert_timestamps:
         trades.index = pd.to_datetime(trades.index, unit='s')
     return trades
+
+
+def get_trades_in_range(trades, min_ts, max_ts):
+    return trades[(trades['timestamp'] >= min_ts)
+                  & (trades['timestamp'] < max_ts)]
+
+
+def get_trades_average(books, trades, offset):
+    # TODO weight by volume and time
+    '''
+    Returns an average of trades for each data point in DataFrame of book data
+    '''
+    def mean_trades(ts):
+        return trades[(trades['timestamp'] >= ts-offset)
+                      & (trades['timestamp'] < ts)].price.mean()
+    return books.index.map(mean_trades)
+
+# TODO:
+# trades buy/sell ratio
+# trades total volume
+# book total volume
 
 
 def check_times(books):
@@ -76,11 +100,43 @@ def check_times(books):
     return time_diff
 
 
-if __name__ == '__main__':
-    ltc_books = get_book_df('ltc', 1000)
+def make_features(symbol, sample, y_offset, trades_offset):
+    '''
+    Returns a dataframe with y and all features
+    '''
+    ltc_books = get_book_df(symbol, sample)
     ltc_books['width'], ltc_books['mid'] = get_width_and_mid(ltc_books)
-    ltc_books['future_mid'] = get_future_mid(ltc_books, 5, 1)
+    ltc_books['future_mid'] = get_future_mid(ltc_books, y_offset, 5)
     ltc_books['imbalance'] = get_imbalance(ltc_books)
-    min_ts = ltc_books.index[0] - 30
+    min_ts = ltc_books.index[0] - trades_offset
     max_ts = ltc_books.index[-1]
-    ltc_trades = get_trade_df('ltc', min_ts, max_ts)
+    ltc_trades = get_trade_df(symbol, min_ts, max_ts)
+    ltc_books['trades_avg'] = get_trades_average(ltc_books,
+                                                 ltc_trades, trades_offset)
+    ltc_books['trades_avg'] = (ltc_books['mid'] /
+                               ltc_books['trades_avg']).apply(log).fillna(0)
+    ltc_books['y'] = (ltc_books['future_mid']/ltc_books['mid']).apply(log)
+    return ltc_books[['y', 'width', 'mid', 'imbalance', 'trades_avg']].dropna()
+
+
+if __name__ == '__main__':
+    symbol = 'ltc'
+    data = make_features(symbol, 10000, 60, 300)
+
+    from sklearn.cross_validation import train_test_split
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.linear_model import LogisticRegression
+    import numpy as np
+    y = data.pop('y')
+    y_binary = np.zeros(len(y))
+    y_binary[y.values > 0] = 1
+    y_binary[y.values < 0] = -1
+    x_train, x_test, y_train, y_test = train_test_split(data.values, y_binary)
+
+    model = DecisionTreeClassifier()
+    model.fit(x_train, y_train)
+    print symbol, 'tree score:', model.score(x_test, y_test)
+
+    model = LogisticRegression()
+    model.fit(x_train, y_train)
+    print symbol, 'logit score:', model.score(x_test, y_test)
