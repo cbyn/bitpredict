@@ -2,6 +2,7 @@ import pymongo
 import pandas as pd
 from math import log
 from time import time
+import pickle
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -140,24 +141,33 @@ def fit_model(X, y, symbol):
     start = time()
     from sklearn.cross_validation import train_test_split
     from sklearn.ensemble import RandomForestClassifier
+    from sklearn.ensemble import RandomForestRegressor
     from sklearn.linear_model import LogisticRegression
     import numpy as np
     y_binary = np.zeros(len(y))
     y_binary[y.values > 0] = 1
     y_binary[y.values < 0] = -1
-    x_train, x_test, y_train, y_test = train_test_split(X, y_binary)
+    x_train, x_test, y_train, y_test = train_test_split(X, y_binary,
+                                                        random_state=42)
 
     model = RandomForestClassifier(n_estimators=1000, n_jobs=-1)
     model.fit(x_train, y_train)
-    print symbol, 'random forest score:', model.score(x_test, y_test)
+    print symbol, 'random forest classifier score:', model.score(x_test, y_test)
 
     model = LogisticRegression()
     model.fit(x_train, y_train)
     print symbol, 'logit score:', model.score(x_test, y_test)
+
+    x_train, x_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    model = RandomForestRegressor(n_estimators=1000, n_jobs=-1)
+    model.fit(x_train, y_train)
+    print symbol, 'random forest regressor score:', model.score(x_test, y_test)
     print 'fit_model', (time()-start)/60
 
 if __name__ == '__main__':
     symbol = 'ltc'
     data = make_features(symbol, sample=1000000, y_offset=60, trades_offset=300)
+    with open('data.pkl', 'w+') as f:
+        pickle.dump(data, f)
     y = data.pop('y')
-    fit_model(data.values, y, symbol)
+    fit_model(data.values, y.values, symbol)
