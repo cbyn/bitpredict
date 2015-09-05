@@ -3,16 +3,17 @@ import pandas as pd
 import numpy as np
 from math import log
 from time import time
+import sys
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
 
 # TODO:
-# fix get_imbalance to weight by distance from mid
-# volume (and time?) weight trades
+# volume on best orders as a direct feature
 # trades buy/sell ratio
 # trades total volume
 # book total volume
+# time-weight trades?
 
 
 def get_book_df(symbol, limit, convert_timestamps=False):
@@ -68,23 +69,22 @@ def get_future_mid(books, offset, sensitivity):
 #     return total_bid_size - total_ask_size
 
 
-def calc_imbalance(book):
-    def calc(x):
-        return x.amount*(.5*book.width/(x.price-book.mid))**6
-    bid_imbalance = book.bids.apply(calc, axis=1)
-    ask_imbalance = book.asks.apply(calc, axis=1)
-    return (bid_imbalance-ask_imbalance).sum()
-
-
 def get_imbalance(books):
     '''
     Returns imbalances between bids and offers for each data point in
     DataFrame of book data
     '''
     start = time()
-    out = books.apply(calc_imbalance, axis=1)
+
+    def calc_imbalance(book):
+        def calc(x):
+            return x.amount*(.5*book.width/(x.price-book.mid))**2
+        bid_imbalance = book.bids.apply(calc, axis=1)
+        ask_imbalance = book.asks.apply(calc, axis=1)
+        return (bid_imbalance-ask_imbalance).sum()
+    books = books.apply(calc_imbalance, axis=1)
     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
-    return out
+    return books
 
 
 def get_trade_df(symbol, min_ts, max_ts, convert_timestamps=False):
@@ -103,22 +103,21 @@ def get_trade_df(symbol, min_ts, max_ts, convert_timestamps=False):
     return trades
 
 
-# def get_trades_in_range(trades, min_ts, max_ts):
-#     return trades[(trades['timestamp'] >= min_ts)
-#                   & (trades['timestamp'] < max_ts)]
-
-
 def get_trades_average(books, trades, offset):
-    # TODO use search sorted?
     '''
-    Returns an average of trades for each data point in DataFrame of book data
+    Returns a volume-weighted average of trades for each data point in
+    DataFrame of book data
     '''
     start = time()
 
     def mean_trades(ts):
         ts = int(ts)
-        return trades[(trades['timestamp'] >= ts-offset)
-                      & (trades['timestamp'] < ts)].price.mean()
+        i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
+        i_n = trades.timestamp.searchsorted([ts-1], side='right')[0]
+        trades_n = trades.iloc[i_0:i_n]
+        if not trades_n.empty:
+            return (trades_n.price*trades_n.amount/trades_n.amount).sum()
+        # return trades.iloc[i_0:i_n].price.mean()
     print 'get_trades_average run time:', (time()-start)/60, 'minutes'
     return books.index.map(mean_trades)
 
@@ -148,7 +147,7 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
         books['mid{}'.format(n)] = \
             get_future_mid(books, n, sensitivity=5)
         books['mid{}'.format(n)] = \
-            (books['mid{}'.format(n)]/books['mid']).apply(log)
+            (books['mid{}'.format(n)]/books.mid).apply(log)
     books['imbalance'] = get_imbalance(books)
     min_ts = books.index[0] - trades_offsets[-1]
     max_ts = books.index[-1]
@@ -158,7 +157,7 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
         books['trades{}'.format(n)] = \
             get_trades_average(books, ltc_trades, n)
         books['trades{}'.format(n)] = \
-            (books['mid'] / books['trades{}'.format(n)]).apply(log).fillna(0)
+            (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
     print 'make_features run time:', (time()-start)/60, 'minutes'
     # Drop observations where y is NaN
     return books.drop(['bids', 'asks'], axis=1).dropna()
@@ -175,47 +174,55 @@ def fit_model(X, y, chunk):
     X_train, X_test = train_test_split(X, chunk)
     y_train, y_test = train_test_split(y_binary, chunk)
 
-    model = RandomForestClassifier(max_depth=5, n_jobs=-1)
+    model = RandomForestClassifier(n_estimators=100,
+                                   min_samples_leaf=500,
+                                   max_depth=10,
+                                   random_state=42,
+                                   n_jobs=-1)
     model.fit(X_train, y_train)
     score = model.score(X_test, y_test)
     return model, score
 
 
 def train_test_split(data, chunk):
-    '''
-    Returns a chunked split of data
-    '''
-    splits = np.array([[0]*chunk+[1]*chunk
-                       for _ in range(len(data)/chunk/2+1)]).ravel()
-    splits = splits[:len(data)]
-    train = np.compress(splits == 0, data, axis=0)
-    test = np.compress(splits == 1, data, axis=0)
-    return train, test
+    # '''
+    # Returns a chunked split of data
+    # '''
+    # splits = np.array([[0]*chunk+[1]*chunk
+    #                    for _ in range(len(data)/chunk/2+1)]).ravel()
+    # splits = splits[:len(data)]
+    # train = np.compress(splits == 0, data, axis=0)
+    # test = np.compress(splits == 1, data, axis=0)
+    # return train, test
+    i = int(chunk*len(data))
+    return data[:i], data[i:]
 
 
 def run_models(data, chunk):
     '''
     Runs a grid search on mid and trades offsets
     '''
-    mid_offsets = [col for col in data.columns if 'mid' in col]
-    trades_offsets = [col for col in data.columns if 'trades' in col]
+    mids = [col for col in data.columns if 'mid' in col]
+    trades = [col for col in data.columns if 'trades' in col]
     scores = {}
-    for m in mid_offsets:
-        for t in trades_offsets:
-            y = data[m].values
-            X = data[['width', 'imbalance', t]].values
-            _, score = fit_model(X, y, chunk)
-            scores[score] = '{}_{}'.format(m, t)
+    for m in mids:
+        y = data[m].values
+        X = data[['width', 'imbalance']+trades].values
+        _, score = fit_model(X, y, chunk)
+        scores[score] = m
     for score in sorted(scores):
         print scores[score], score
 
 
-def make_data(symbol, sample, filename):
+def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
                          mid_offsets=[5, 10, 30, 60, 120, 300, 600],
                          trades_offsets=[5, 10, 30, 60, 120, 300, 600])
-    import pickle
-    with open(filename, 'w+') as f:
-        pickle.dump(data, f)
     return data
+
+if __name__ == '__main__' and len(sys.argv) == 4:
+    import pickle
+    data = make_data(sys.argv[1], int(sys.argv[2]))
+    with open(sys.argv[3], 'w+') as f:
+        pickle.dump(data, f)
