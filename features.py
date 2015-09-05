@@ -213,16 +213,14 @@ def fit_classifier(X, y, window):
     '''
     Fits classifier model using cross validation
     '''
-    y_class = np.zeros(len(y))
-    y_class[y > 0] = 1
-    y_class[y < 0] = -1
+    y_sign = np.sign(y)
     from sklearn.ensemble import RandomForestClassifier
     model = RandomForestClassifier(n_estimators=100,
                                    min_samples_leaf=500,
                                    max_depth=10,
                                    random_state=42,
                                    n_jobs=-1)
-    return cross_validate(X, y_class, model, window)
+    return cross_validate(X, y_sign, model, window)
 
 
 def fit_regressor(X, y, window):
@@ -231,7 +229,7 @@ def fit_regressor(X, y, window):
     '''
     from sklearn.ensemble import RandomForestRegressor
     model = RandomForestRegressor(n_estimators=100,
-                                  min_samples_leaf=500,
+                                  # min_samples_leaf=100,
                                   max_depth=10,
                                   random_state=42,
                                   n_jobs=-1)
@@ -265,7 +263,7 @@ def run_models(data, window):
 def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
-                         mid_offsets=[5, 10, 30, 60],
+                         mid_offsets=[5, 10, 30, 60, 300, 600],
                          trades_offsets=[30, 60, 120, 300, 600])
     return data
 
