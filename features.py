@@ -9,6 +9,7 @@ client = pymongo.MongoClient()
 db = client['bitmicro']
 
 # TODO:
+# cross validation
 # volume on best orders as a direct feature
 # trades total volume
 # book total volume
@@ -188,60 +189,56 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
     return books.drop(['bids', 'asks'], axis=1).dropna()
 
 
-def fit_classifier(X, y, chunk):
+def cross_validate(X, y, model, window):
     '''
-    Fits a model to data
+    Cross validates time series data using a rolling window where train
+    data is always before test data
     '''
-    from sklearn.ensemble import RandomForestClassifier
-    y_binary = np.zeros(len(y))
-    y_binary[y > 0] = 1
-    y_binary[y < 0] = -1
-    X_train, X_test = train_test_split(X, chunk)
-    y_train, y_test = train_test_split(y_binary, chunk)
+    in_sample_score = []
+    out_sample_score = []
+    for i in range(1, len(y)/window):
+        train_index = np.arange(0, i*window)
+        test_index = np.arange(i*window, (i+1)*window)
+        y_train = y.take(train_index)
+        y_test = y.take(test_index)
+        X_train = X.take(train_index, axis=0)
+        X_test = X.take(test_index, axis=0)
+        model.fit(X_train, y_train)
+        in_sample_score.append(model.score(X_train, y_train))
+        out_sample_score.append(model.score(X_test, y_test))
+    return model, np.mean(in_sample_score), np.mean(out_sample_score)
 
+
+def fit_classifier(X, y, window):
+    '''
+    Fits classifier model using cross validation
+    '''
+    y_class = np.zeros(len(y))
+    y_class[y > 0] = 1
+    y_class[y < 0] = -1
+    from sklearn.ensemble import RandomForestClassifier
     model = RandomForestClassifier(n_estimators=100,
                                    min_samples_leaf=500,
                                    max_depth=10,
                                    random_state=42,
                                    n_jobs=-1)
-    model.fit(X_train, y_train)
-    score = model.score(X_test, y_test)
-    return model, score
+    return cross_validate(X, y_class, model, window)
 
 
-def fit_regressor(X, y, chunk):
+def fit_regressor(X, y, window):
     '''
-    Fits a model to data
+    Fits regressor model using cross validation
     '''
     from sklearn.ensemble import RandomForestRegressor
-    X_train, X_test = train_test_split(X, chunk)
-    y_train, y_test = train_test_split(y, chunk)
-
     model = RandomForestRegressor(n_estimators=100,
                                   min_samples_leaf=500,
                                   max_depth=10,
                                   random_state=42,
                                   n_jobs=-1)
-    model.fit(X_train, y_train)
-    score = model.score(X_test, y_test)
-    return model, score
+    return cross_validate(X, y, model, window)
 
 
-def train_test_split(data, chunk):
-    # '''
-    # Returns a chunked split of data
-    # '''
-    # splits = np.array([[0]*chunk+[1]*chunk
-    #                    for _ in range(len(data)/chunk/2+1)]).ravel()
-    # splits = splits[:len(data)]
-    # train = np.compress(splits == 0, data, axis=0)
-    # test = np.compress(splits == 1, data, axis=0)
-    # return train, test
-    i = int(chunk*len(data))
-    return data[:i], data[i:]
-
-
-def run_models(data, chunk):
+def run_models(data, window):
     '''
     Runs model with a range of target offsets
     '''
@@ -253,9 +250,9 @@ def run_models(data, chunk):
     for m in mids:
         y = data[m].values
         X = data[['width', 'imbalance']+trades+aggressors].values
-        _, classifier_score = fit_classifier(X, y, chunk)
+        _, _, classifier_score = fit_classifier(X, y, window)
         classifier_scores[classifier_score] = m
-        _, regressor_score = fit_regressor(X, y, chunk)
+        _, _, regressor_score = fit_regressor(X, y, window)
         regressor_scores[regressor_score] = m
     print 'classifier accuracies:'
     for score in sorted(classifier_scores):
