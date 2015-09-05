@@ -14,6 +14,7 @@ db = client['bitmicro']
 # trades total volume
 # book total volume
 # time-weight trades?
+# experiment with exponent in get_imbalance
 
 
 def get_book_df(symbol, limit, convert_timestamps=False):
@@ -71,8 +72,8 @@ def get_future_mid(books, offset, sensitivity):
 
 def get_imbalance(books):
     '''
-    Returns imbalances between bids and offers for each data point in
-    DataFrame of book data
+    Returns a measure of the imbalance between bids and offers for each data
+    point in DataFrame of book data
     '''
     start = time()
 
@@ -81,7 +82,8 @@ def get_imbalance(books):
             return x.amount*(.5*book.width/(x.price-book.mid))**2
         bid_imbalance = book.bids.apply(calc, axis=1)
         ask_imbalance = book.asks.apply(calc, axis=1)
-        return (bid_imbalance-ask_imbalance).sum()
+        return bid_imbalance.sum()/ask_imbalance.sum()
+        # return (bid_imbalance-ask_imbalance).sum()
     books = books.apply(calc_imbalance, axis=1)
     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
     return books
@@ -122,6 +124,12 @@ def get_trades_average(books, trades, offset):
     return books.index.map(mean_trades)
 
 
+def get_aggressors(books, trades, offset):
+    '''
+    Return
+    '''
+
+
 def check_times(books):
     '''
     Returns list of differeces between collection time and max book timestamps
@@ -152,7 +160,7 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
     min_ts = books.index[0] - trades_offsets[-1]
     max_ts = books.index[-1]
     ltc_trades = get_trade_df(symbol, min_ts, max_ts)
-    # Fill trades NaNs with zero (there are no trades in range)
+    # Fill trade NaNs with zero (there are no trades in range)
     for n in trades_offsets:
         books['trades{}'.format(n)] = \
             get_trades_average(books, ltc_trades, n)
