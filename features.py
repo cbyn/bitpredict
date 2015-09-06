@@ -196,7 +196,7 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
     books['imbalance'] = get_imbalance(books)
     books['adjusted_price'] = get_adjusted_price(books)
     books['adjusted_price'] = (books.adjusted_price/books.mid).apply(log)
-    books['previous'] = get_future_mid(books, -10, sensitivity=1)
+    books['previous'] = get_future_mid(books, -mid_offsets[-1], sensitivity=1)
     # Fill previous NaNs with zero (assume no change)
     books['previous'] = (books.mid/books.previous).apply(log).fillna(0)
 
@@ -306,7 +306,7 @@ def run_models(data, window):
 def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
-                         mid_offsets=[5, 10],
+                         mid_offsets=[10],
                          trades_offsets=[30, 60, 180])
     return data
 
