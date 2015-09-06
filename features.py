@@ -8,14 +8,6 @@ import sys
 client = pymongo.MongoClient()
 db = client['bitmicro']
 
-# TODO:
-# cross validation
-# volume on best orders as a direct feature
-# trades total volume
-# book total volume
-# time-weight trades?
-# experiment with exponent in get_imbalance
-
 
 def get_book_df(symbol, limit, convert_timestamps=False):
     '''
@@ -58,7 +50,7 @@ def get_future_mid(books, offset, sensitivity):
     return books.index.map(future)
 
 
-def get_imbalance(books):
+def get_imbalance(books, n=5):
     '''
     Returns a measure of the imbalance between bids and offers for each data
     point in DataFrame of book data
@@ -66,13 +58,33 @@ def get_imbalance(books):
     start = time()
 
     def calc_imbalance(book):
-        def calc(x):
-            return x.amount*(.5*book.width/(x.price-book.mid))**2
-        bid_imbalance = book.bids.apply(calc, axis=1)
-        ask_imbalance = book.asks.apply(calc, axis=1)
-        return (bid_imbalance-ask_imbalance).sum()
+        # def calc(x):
+        #     return x.amount*(.5*book.width/(x.price-book.mid))**2
+        # bid_imbalance = book.bids.apply(calc, axis=1)
+        # ask_imbalance = book.asks.apply(calc, axis=1)
+        # return (bid_imbalance-ask_imbalance).sum()
+        return (book.bids.amount.iloc[:n] - book.asks.amount.iloc[:n]).sum()
     books = books.apply(calc_imbalance, axis=1)
     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
+    return books
+
+
+def get_adjusted_price(books, n=5):
+    '''
+    Returns an average of price weighted by inverse volume for each data point
+    in DataFrame of book data
+    '''
+    start = time()
+
+    def calc_adjusted_price(book):
+        bid_inv = 1/book.bids.amount.iloc[:n]
+        ask_inv = 1/book.asks.amount.iloc[:n]
+        bid_price = book.bids.price.iloc[:n]
+        ask_price = book.asks.price.iloc[:n]
+        return (bid_price*bid_inv + ask_price*ask_inv).sum() /\
+            (bid_inv + ask_inv).sum()
+    books = books.apply(calc_adjusted_price, axis=1)
+    print 'get_adjusted_price run time:', (time()-start)/60, 'minutes'
     return books
 
 
@@ -112,8 +124,7 @@ def get_trades_average(books, trades, offset):
     def mean_trades(ts):
         trades_n = get_trades_in_range(trades, ts, offset)
         if not trades_n.empty:
-            return (trades_n.price*trades_n.amount/trades_n.amount).sum()
-        # return trades.iloc[i_0:i_n].price.mean()
+            return (trades_n.price*trades_n.amount).sum()/trades_n.amount.sum()
     print 'get_trades_average run time:', (time()-start)/60, 'minutes'
     return books.index.map(mean_trades)
 
@@ -135,6 +146,24 @@ def get_aggressor(books, trades, offset):
     return books.index.map(aggressor)
 
 
+def get_trend(books, trades, offset):
+    '''
+    Returns the linear trend in previous trades for each data point in
+    DataFrame of book data
+    '''
+    start = time()
+    from scipy.stats import linregress
+
+    def trend(ts):
+        trades_n = get_trades_in_range(trades, ts, offset)
+        if len(trades_n) < 3:
+            return 0
+        else:
+            return linregress(trades_n.index.values, trades_n.price.values)[0]
+    print 'get_trend run time:', (time()-start)/60, 'minutes'
+    return books.index.map(trend)
+
+
 def check_times(books):
     '''
     Returns list of differences between collection time and max book timestamps
@@ -154,14 +183,24 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
     Returns a DataFrame with mid targets and features
     '''
     start = time()
+    # Book related features:
     books = get_book_df(symbol, sample)
     books['width'], books['mid'] = get_width_and_mid(books)
     for n in mid_offsets:
         books['mid{}'.format(n)] = \
-            get_future_mid(books, n, sensitivity=5)
+            get_future_mid(books, n, sensitivity=2)
         books['mid{}'.format(n)] = \
             (books['mid{}'.format(n)]/books.mid).apply(log)
+    # Drop observations where y is NaN
+    books = books.dropna()
     books['imbalance'] = get_imbalance(books)
+    books['adjusted_price'] = get_adjusted_price(books)
+    books['adjusted_price'] = (books.adjusted_price/books.mid).apply(log)
+    books['previous'] = get_future_mid(books, -30, sensitivity=5)
+    # Fill previous NaNs with zero (assume no change)
+    books['previous'] = (books.mid/books.previous).apply(log).fillna(0)
+
+    # Trade related features:
     min_ts = books.index[0] - trades_offsets[-1]
     max_ts = books.index[-1]
     trades = get_trade_df(symbol, min_ts, max_ts)
@@ -171,9 +210,10 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
         books['trades{}'.format(n)] = \
             (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
         books['aggressor{}'.format(n)] = get_aggressor(books, trades, n)
+        books['trend{}'.format(n)] = get_trend(books, trades, n)
     print 'make_features run time:', (time()-start)/60, 'minutes'
-    # Drop observations where y is NaN
-    return books.drop(['bids', 'asks'], axis=1).dropna()
+
+    return books.drop(['bids', 'asks', 'mid'], axis=1)
 
 
 def cross_validate(X, y, model, window):
@@ -244,11 +284,13 @@ def run_models(data, window):
     mids = [col for col in data.columns if 'mid' in col]
     trades = [col for col in data.columns if 'trades' in col]
     aggressors = [col for col in data.columns if 'aggressor' in col]
+    trends = [col for col in data.columns if 'trend' in col]
     classifier_scores = {}
     regressor_scores = {}
     for m in mids:
         y = data[m].values
-        X = data[['width', 'imbalance']+trades+aggressors].values
+        X = data[['width', 'imbalance', 'prev_mid', 'adjusted_price']
+                 + trades+aggressors+trends].values
         _, _, classifier_score = fit_classifier(X, y, window)
         classifier_scores[classifier_score] = m
         _, _, regressor_score = fit_regressor(X, y, window)
@@ -264,8 +306,8 @@ def run_models(data, window):
 def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
-                         mid_offsets=[10, 30, 60, 300],
-                         trades_offsets=[60, 300, 600])
+                         mid_offsets=[10, 30],
+                         trades_offsets=[60, 180])
     return data
 
 if __name__ == '__main__' and len(sys.argv) == 4:
