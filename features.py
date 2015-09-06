@@ -210,6 +210,20 @@ def fit_classifier(X, y, window):
     return cross_validate(X, y_sign, model, window)
 
 
+def fit(X, y):
+    y_sign = np.sign(y)
+    from sklearn.ensemble import RandomForestClassifier
+    model = RandomForestClassifier(n_estimators=100,
+                                   min_samples_leaf=1000,
+                                   # max_depth=10,
+                                   random_state=42,
+                                   n_jobs=-1)
+    model.fit(X[:700000], y_sign[:700000])
+    print model.score(X[:700000], y_sign[:700000])
+    print model.score(X[700000:], y_sign[700000:])
+    return model
+
+
 def fit_regressor(X, y, window):
     '''
     Fits regressor model using cross validation
