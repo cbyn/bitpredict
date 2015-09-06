@@ -58,18 +58,6 @@ def get_future_mid(books, offset, sensitivity):
     return books.index.map(future)
 
 
-# def get_imbalance(books):
-#     '''
-#     Returns imbalances between bids and offers for each data point in
-#     DataFrame of book data
-#     '''
-#     start = time()
-#     total_bid_size = books.bids.apply(lambda x: x.amount.sum())
-#     total_ask_size = books.asks.apply(lambda x: x.amount.sum())
-#     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
-#     return total_bid_size - total_ask_size
-
-
 def get_imbalance(books):
     '''
     Returns a measure of the imbalance between bids and offers for each data
@@ -82,8 +70,7 @@ def get_imbalance(books):
             return x.amount*(.5*book.width/(x.price-book.mid))**2
         bid_imbalance = book.bids.apply(calc, axis=1)
         ask_imbalance = book.asks.apply(calc, axis=1)
-        return bid_imbalance.sum() - ask_imbalance.sum()
-        # return (bid_imbalance-ask_imbalance).sum()
+        return (bid_imbalance-ask_imbalance).sum()
     books = books.apply(calc_imbalance, axis=1)
     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
     return books
@@ -141,9 +128,9 @@ def get_aggressor(books, trades, offset):
     def aggressor(ts):
         trades_n = get_trades_in_range(trades, ts, offset)
         buys = trades_n['type'] == 'buy'
-        buy_vol = trades_n[buys].amount.sum()
-        sell_vol = trades_n[~buys].amount.sum()
-        return buy_vol - sell_vol
+        buy_vol = trades_n[buys].amount
+        sell_vol = trades_n[~buys].amount
+        return (buy_vol - sell_vol).sum()
     print 'get_aggressor run time:', (time()-start)/60, 'minutes'
     return books.index.map(aggressor)
 
@@ -215,8 +202,8 @@ def fit_classifier(X, y, window):
     '''
     y_sign = np.sign(y)
     from sklearn.ensemble import RandomForestClassifier
-    model = RandomForestClassifier(n_estimators=100,
-                                   min_samples_leaf=500,
+    model = RandomForestClassifier(n_estimators=50,
+                                   # min_samples_leaf=500,
                                    max_depth=10,
                                    random_state=42,
                                    n_jobs=-1)
@@ -228,8 +215,8 @@ def fit_regressor(X, y, window):
     Fits regressor model using cross validation
     '''
     from sklearn.ensemble import RandomForestRegressor
-    model = RandomForestRegressor(n_estimators=100,
-                                  # min_samples_leaf=100,
+    model = RandomForestRegressor(n_estimators=50,
+                                  # min_samples_leaf=500,
                                   max_depth=10,
                                   random_state=42,
                                   n_jobs=-1)
@@ -263,8 +250,8 @@ def run_models(data, window):
 def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
-                         mid_offsets=[5, 10, 30, 60, 300, 600],
-                         trades_offsets=[30, 60, 120, 300, 600])
+                         mid_offsets=[10, 30, 60, 300],
+                         trades_offsets=[60, 300, 600])
     return data
 
 if __name__ == '__main__' and len(sys.argv) == 4:
