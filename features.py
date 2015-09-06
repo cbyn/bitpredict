@@ -188,7 +188,7 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
     books['width'], books['mid'] = get_width_and_mid(books)
     for n in mid_offsets:
         books['mid{}'.format(n)] = \
-            get_future_mid(books, n, sensitivity=2)
+            get_future_mid(books, n, sensitivity=1)
         books['mid{}'.format(n)] = \
             (books['mid{}'.format(n)]/books.mid).apply(log)
     # Drop observations where y is NaN
@@ -196,7 +196,7 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
     books['imbalance'] = get_imbalance(books)
     books['adjusted_price'] = get_adjusted_price(books)
     books['adjusted_price'] = (books.adjusted_price/books.mid).apply(log)
-    books['previous'] = get_future_mid(books, -30, sensitivity=5)
+    books['previous'] = get_future_mid(books, -10, sensitivity=1)
     # Fill previous NaNs with zero (assume no change)
     books['previous'] = (books.mid/books.previous).apply(log).fillna(0)
 
@@ -244,7 +244,7 @@ def fit_classifier(X, y, window):
     from sklearn.ensemble import RandomForestClassifier
     model = RandomForestClassifier(n_estimators=50,
                                    # min_samples_leaf=500,
-                                   max_depth=10,
+                                   max_depth=5,
                                    random_state=42,
                                    n_jobs=-1)
     return cross_validate(X, y_sign, model, window)
@@ -271,7 +271,7 @@ def fit_regressor(X, y, window):
     from sklearn.ensemble import RandomForestRegressor
     model = RandomForestRegressor(n_estimators=50,
                                   # min_samples_leaf=500,
-                                  max_depth=10,
+                                  max_depth=5,
                                   random_state=42,
                                   n_jobs=-1)
     return cross_validate(X, y, model, window)
@@ -289,7 +289,7 @@ def run_models(data, window):
     regressor_scores = {}
     for m in mids:
         y = data[m].values
-        X = data[['width', 'imbalance', 'prev_mid', 'adjusted_price']
+        X = data[['width', 'imbalance', 'previous', 'adjusted_price']
                  + trades+aggressors+trends].values
         _, _, classifier_score = fit_classifier(X, y, window)
         classifier_scores[classifier_score] = m
@@ -306,8 +306,8 @@ def run_models(data, window):
 def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
-                         mid_offsets=[10, 30],
-                         trades_offsets=[60, 180])
+                         mid_offsets=[5, 10],
+                         trades_offsets=[30, 60, 180])
     return data
 
 if __name__ == '__main__' and len(sys.argv) == 4:
