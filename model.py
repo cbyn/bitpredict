@@ -29,7 +29,7 @@ def fit_classifier(X, y, window):
     Fits classifier model using cross validation
     '''
     y_sign = np.sign(y)
-    model = RandomForestClassifier(n_estimators=100,
+    model = RandomForestClassifier(n_estimators=15,
                                    min_samples_leaf=500,
                                    # max_depth=10,
                                    random_state=42,
@@ -37,24 +37,11 @@ def fit_classifier(X, y, window):
     return cross_validate(X, y_sign, model, window)
 
 
-# def fit(X, y):
-#     y_sign = np.sign(y)
-#     model = RandomForestClassifier(n_estimators=100,
-#                                    min_samples_leaf=10000,
-# max_depth=10,
-#                                    random_state=42,
-#                                    n_jobs=-1)
-#     model.fit(X[:700000], y_sign[:700000])
-#     print model.score(X[:700000], y_sign[:700000])
-#     print model.score(X[700000:], y_sign[700000:])
-#     return model
-
-
 def fit_regressor(X, y, window):
     '''
     Fits regressor model using cross validation
     '''
-    model = RandomForestRegressor(n_estimators=100,
+    model = RandomForestRegressor(n_estimators=15,
                                   min_samples_leaf=500,
                                   # max_depth=10,
                                   random_state=42,
@@ -62,34 +49,50 @@ def fit_regressor(X, y, window):
     return cross_validate(X, y, model, window)
 
 
-def run_models(data, window):
+def run_models(data, window, drop_zeros=True):
     '''
-    Runs model with a range of target offsets
+    Runs cross-validated models with a range of target offsets and outputs
+    results sorted by out-of-sample performance
     '''
     mids = [col for col in data.columns if 'mid' in col]
+    prevs = [col for col in data.columns if 'prev' in col]
     in_class_scores = {}
     out_class_scores = {}
     in_reg_scores = {}
     out_reg_scores = {}
-    for m in mids:
-        y = data[data[m] != 0][m].values
-        X = data[data[m] != 0].drop(mids).values
+    for i in range(len(mids)):
+        print 'fitting model #{}...'.format(i+1)
+        m = mids[i]
+        p = prevs[i]
+        if drop_zeros:
+            y = data[data[m] != 0][m].values
+            prev = data[data[m] != 0][p]
+            X = data[data[m] != 0].drop(mids+prevs, axis=1)
+            X = X.join(prev)
+            X = X.values
+        else:
+            y = data[m].values
+            prev = data[p]
+            X = data.drop(mids+prevs, axis=1)
+            X = X.join(prev)
+            X = X.values
         _, in_class_score, out_class_score = fit_classifier(X, y, window)
         in_class_scores[m] = in_class_score
         out_class_scores[out_class_score] = m
         _, in_reg_score, out_reg_score = fit_regressor(X, y, window)
         in_reg_scores[m] = in_reg_score
         out_reg_scores[out_reg_score] = m
-    print 'classifier accuracy:'
+    print '\nclassifier accuracy:'
     for score in sorted(out_class_scores):
         m = out_class_scores[score]
         print 'out-of-sample', m, score
-        print 'in-sample', m, in_class_scores[m]
-    print 'regressor r^2:'
+        print 'in-sample', m, in_class_scores[m], '\n'
+    print '\nregressor r^2:'
     for score in sorted(out_reg_scores):
         m = out_reg_scores[score]
         print 'out-of-sample', m, score
-        print 'in-sample', m, in_reg_scores[m]
+        print 'in-sample', m, in_reg_scores[m], '\n'
+
 
 def get_pickle(filename):
     with open(filename, 'r') as f:
