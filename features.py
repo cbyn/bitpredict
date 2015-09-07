@@ -63,9 +63,9 @@ def get_imbalance(books, n=5):
 
     def calc_imbalance(book):
         return (book.bids.amount.iloc[:n] - book.asks.amount.iloc[:n]).sum()
-    books = books.apply(calc_imbalance, axis=1)
+    imbalance = books.apply(calc_imbalance, axis=1)
     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
-    return books
+    return imbalance
 
 
 def get_imbalance2(books, n=10):
@@ -81,9 +81,9 @@ def get_imbalance2(books, n=10):
         bid_imbalance = book.bids.iloc[:n].apply(calc, axis=1)
         ask_imbalance = book.asks.iloc[:n].apply(calc, axis=1)
         return (bid_imbalance-ask_imbalance).sum()
-    books = books.apply(calc_imbalance, axis=1)
+    imbalance = books.apply(calc_imbalance, axis=1)
     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
-    return books
+    return imbalance
 
 
 def get_adjusted_price(books, n=5):
@@ -100,9 +100,9 @@ def get_adjusted_price(books, n=5):
         ask_price = book.asks.price.iloc[:n]
         return (bid_price*bid_inv + ask_price*ask_inv).sum() /\
             (bid_inv + ask_inv).sum()
-    books = books.apply(calc_adjusted_price, axis=1)
+    adjusted = books.apply(calc_adjusted_price, axis=1)
     print 'get_adjusted_price run time:', (time()-start)/60, 'minutes'
-    return books
+    return adjusted
 
 
 def get_adjusted_price2(books, n=10):
@@ -121,9 +121,9 @@ def get_adjusted_price2(books, n=10):
         ask_price = book.asks.price.iloc[:n]
         return (bid_price*bid_inv + ask_price*ask_inv).sum() /\
             (bid_inv + ask_inv).sum()
-    books = books.apply(calc_adjusted_price, axis=1)
+    adjusted = books.apply(calc_adjusted_price, axis=1)
     print 'get_adjusted_price run time:', (time()-start)/60, 'minutes'
-    return books
+    return adjusted
 
 
 def get_trade_df(symbol, min_ts, max_ts, convert_timestamps=False):
@@ -259,8 +259,8 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
 def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
-                         mid_offsets=[5, 10, 20],
-                         trades_offsets=[30, 120, 300])
+                         mid_offsets=[10],
+                         trades_offsets=[30, 120])
     return data
 
 if __name__ == '__main__' and len(sys.argv) == 4:
