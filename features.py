@@ -5,6 +5,9 @@ from math import log
 from time import time
 import sys
 
+# TODO
+# redo imbalance calc (and use for smart price?)
+
 client = pymongo.MongoClient()
 db = client['bitmicro']
 
@@ -69,6 +72,24 @@ def get_imbalance(books, n=5):
     return books
 
 
+def get_imbalance2(books, n=10):
+    '''
+    Returns a measure of the imbalance between bids and offers for each data
+    point in DataFrame of book data
+    '''
+    start = time()
+
+    def calc_imbalance(book):
+        def calc(x):
+            return x.amount*(.5*book.width/(x.price-book.mid))**2
+        bid_imbalance = book.bids.iloc[:n].apply(calc, axis=1)
+        ask_imbalance = book.asks.iloc[:n].apply(calc, axis=1)
+        return (bid_imbalance-ask_imbalance).sum()
+    books = books.apply(calc_imbalance, axis=1)
+    print 'get_imbalance run time:', (time()-start)/60, 'minutes'
+    return books
+
+
 def get_adjusted_price(books, n=5):
     '''
     Returns an average of price weighted by inverse volume for each data point
@@ -79,6 +100,27 @@ def get_adjusted_price(books, n=5):
     def calc_adjusted_price(book):
         bid_inv = 1/book.bids.amount.iloc[:n]
         ask_inv = 1/book.asks.amount.iloc[:n]
+        bid_price = book.bids.price.iloc[:n]
+        ask_price = book.asks.price.iloc[:n]
+        return (bid_price*bid_inv + ask_price*ask_inv).sum() /\
+            (bid_inv + ask_inv).sum()
+    books = books.apply(calc_adjusted_price, axis=1)
+    print 'get_adjusted_price run time:', (time()-start)/60, 'minutes'
+    return books
+
+
+def get_adjusted_price2(books, n=10):
+    '''
+    Returns an average of price weighted by inverse volume for each data point
+    in DataFrame of book data
+    '''
+    start = time()
+
+    def calc_adjusted_price(book):
+        def calc(x):
+            return x.amount*(.5*book.width/(x.price-book.mid))**2
+        bid_inv = 1/book.bids.iloc[:n].apply(calc, axis=1)
+        ask_inv = 1/book.asks.iloc[:n].apply(calc, axis=1)
         bid_price = book.bids.price.iloc[:n]
         ask_price = book.asks.price.iloc[:n]
         return (bid_price*bid_inv + ask_price*ask_inv).sum() /\
@@ -180,7 +222,7 @@ def check_times(books):
 
 def make_features(symbol, sample, mid_offsets, trades_offsets):
     '''
-    Returns a DataFrame with mid targets and features
+    Returns a DataFrame with targets and features
     '''
     start = time()
     # Book related features:
@@ -191,14 +233,17 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
             get_future_mid(books, n, sensitivity=1)
         books['mid{}'.format(n)] = \
             (books['mid{}'.format(n)]/books.mid).apply(log)
+        books['prev{}'.format(n)] = get_future_mid(books, -n, sensitivity=1)
+        books['prev{}'.format(n)] = (books.mid/books['prev{}'.format(n)])\
+            .apply(log).fillna(0)  # Fill prev NaNs with zero (assume no change)
     # Drop observations where y is NaN
     books = books.dropna()
     books['imbalance'] = get_imbalance(books)
+    books['imbalance2'] = get_imbalance2(books)
     books['adjusted_price'] = get_adjusted_price(books)
     books['adjusted_price'] = (books.adjusted_price/books.mid).apply(log)
-    books['previous'] = get_future_mid(books, -mid_offsets[-1], sensitivity=1)
-    # Fill previous NaNs with zero (assume no change)
-    books['previous'] = (books.mid/books.previous).apply(log).fillna(0)
+    books['adjusted_price2'] = get_adjusted_price2(books)
+    books['adjusted_price2'] = (books.adjusted_price2/books.mid).apply(log)
 
     # Trade related features:
     min_ts = books.index[0] - trades_offsets[-1]
@@ -306,8 +351,8 @@ def run_models(data, window):
 def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
-                         mid_offsets=[10],
-                         trades_offsets=[30, 60, 180])
+                         mid_offsets=[5, 10, 20],
+                         trades_offsets=[30, 120, 300])
     return data
 
 if __name__ == '__main__' and len(sys.argv) == 4:
