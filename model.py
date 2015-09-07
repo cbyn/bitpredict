@@ -59,7 +59,7 @@ def fit_regressor(X, y, window):
     return cross_validate(X, y, model, window)
 
 
-def run_models(data, window, drop_zeros=True):
+def run_models(data, window, drop_zeros=False):
     '''
     Runs cross-validated models with a range of target offsets and outputs
     results sorted by out-of-sample performance
