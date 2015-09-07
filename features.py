@@ -4,9 +4,8 @@ import numpy as np
 from math import log
 from time import time
 import sys
-
-# TODO
-# redo imbalance calc (and use for smart price?)
+from scipy.stats import linregress
+import pickle
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -61,12 +60,7 @@ def get_imbalance(books, n=5):
     start = time()
 
     def calc_imbalance(book):
-        # def calc(x):
-        #     return x.amount*(.5*book.width/(x.price-book.mid))**2
-        # bid_imbalance = book.bids.apply(calc, axis=1)
-        # ask_imbalance = book.asks.apply(calc, axis=1)
-        # return (bid_imbalance-ask_imbalance).sum()
-        return (book.bids.amount.iloc[:n] - book.asks.amount.iloc[:n]).sum()
+       return (book.bids.amount.iloc[:n] - book.asks.amount.iloc[:n]).sum()
     books = books.apply(calc_imbalance, axis=1)
     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
     return books
@@ -194,7 +188,6 @@ def get_trend(books, trades, offset):
     DataFrame of book data
     '''
     start = time()
-    from scipy.stats import linregress
 
     def trend(ts):
         trades_n = get_trades_in_range(trades, ts, offset)
@@ -261,93 +254,6 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
     return books.drop(['bids', 'asks', 'mid'], axis=1)
 
 
-def cross_validate(X, y, model, window):
-    '''
-    Cross validates time series data using a rolling window where train
-    data is always before test data
-    '''
-    in_sample_score = []
-    out_sample_score = []
-    for i in range(1, len(y)/window):
-        train_index = np.arange(0, i*window)
-        test_index = np.arange(i*window, (i+1)*window)
-        y_train = y.take(train_index)
-        y_test = y.take(test_index)
-        X_train = X.take(train_index, axis=0)
-        X_test = X.take(test_index, axis=0)
-        model.fit(X_train, y_train)
-        in_sample_score.append(model.score(X_train, y_train))
-        out_sample_score.append(model.score(X_test, y_test))
-    return model, np.mean(in_sample_score), np.mean(out_sample_score)
-
-
-def fit_classifier(X, y, window):
-    '''
-    Fits classifier model using cross validation
-    '''
-    y_sign = np.sign(y)
-    from sklearn.ensemble import RandomForestClassifier
-    model = RandomForestClassifier(n_estimators=100,
-                                   min_samples_leaf=500,
-                                   # max_depth=10,
-                                   random_state=42,
-                                   n_jobs=-1)
-    return cross_validate(X, y_sign, model, window)
-
-
-# def fit(X, y):
-#     y_sign = np.sign(y)
-#     from sklearn.ensemble import RandomForestClassifier
-#     model = RandomForestClassifier(n_estimators=100,
-#                                    min_samples_leaf=10000,
-#                                    # max_depth=10,
-#                                    random_state=42,
-#                                    n_jobs=-1)
-#     model.fit(X[:700000], y_sign[:700000])
-#     print model.score(X[:700000], y_sign[:700000])
-#     print model.score(X[700000:], y_sign[700000:])
-#     return model
-
-
-def fit_regressor(X, y, window):
-    '''
-    Fits regressor model using cross validation
-    '''
-    from sklearn.ensemble import RandomForestRegressor
-    model = RandomForestRegressor(n_estimators=100,
-                                  min_samples_leaf=500,
-                                  # max_depth=10,
-                                  random_state=42,
-                                  n_jobs=-1)
-    return cross_validate(X, y, model, window)
-
-
-def run_models(data, window):
-    '''
-    Runs model with a range of target offsets
-    '''
-    mids = [col for col in data.columns if 'mid' in col]
-    trades = [col for col in data.columns if 'trades' in col]
-    aggressors = [col for col in data.columns if 'aggressor' in col]
-    trends = [col for col in data.columns if 'trend' in col]
-    classifier_scores = {}
-    regressor_scores = {}
-    for m in mids:
-        y = data[m].values
-        X = data[['width', 'imbalance', 'previous', 'adjusted_price']
-                 + trades+aggressors+trends].values
-        _, _, classifier_score = fit_classifier(X, y, window)
-        classifier_scores[classifier_score] = m
-        _, _, regressor_score = fit_regressor(X, y, window)
-        regressor_scores[regressor_score] = m
-    print 'classifier accuracies:'
-    for score in sorted(classifier_scores):
-        print classifier_scores[score], score
-    print 'regressor r^2:'
-    for score in sorted(regressor_scores):
-        print regressor_scores[score], score
-
-
 def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
@@ -356,7 +262,6 @@ def make_data(symbol, sample):
     return data
 
 if __name__ == '__main__' and len(sys.argv) == 4:
-    import pickle
     data = make_data(sys.argv[1], int(sys.argv[2]))
     with open(sys.argv[3], 'w+') as f:
         pickle.dump(data, f)
