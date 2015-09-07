@@ -1,11 +1,13 @@
 import pymongo
 import pandas as pd
-import numpy as np
 from math import log
 from time import time
 import sys
 from scipy.stats import linregress
 import pickle
+
+# TODO
+# investigate imbalance2 nans
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -60,7 +62,7 @@ def get_imbalance(books, n=5):
     start = time()
 
     def calc_imbalance(book):
-       return (book.bids.amount.iloc[:n] - book.asks.amount.iloc[:n]).sum()
+        return (book.bids.amount.iloc[:n] - book.asks.amount.iloc[:n]).sum()
     books = books.apply(calc_imbalance, axis=1)
     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
     return books
@@ -175,9 +177,9 @@ def get_aggressor(books, trades, offset):
     def aggressor(ts):
         trades_n = get_trades_in_range(trades, ts, offset)
         buys = trades_n['type'] == 'buy'
-        buy_vol = trades_n[buys].amount
-        sell_vol = trades_n[~buys].amount
-        return (buy_vol - sell_vol).sum()
+        buy_vol = trades_n[buys].amount.sum()
+        sell_vol = trades_n[~buys].amount.sum()
+        return buy_vol - sell_vol
     print 'get_aggressor run time:', (time()-start)/60, 'minutes'
     return books.index.map(aggressor)
 
