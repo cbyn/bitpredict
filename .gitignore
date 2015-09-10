@@ -1,5 +1,6 @@
 *.pyc
 *data/*
+*.pkl
 *.swp
 *ipynb*
 *0.0.0.0*
