@@ -31,6 +31,7 @@ def get_json(url):
 print 'Running...'
 last_timestamp = 0
 while True:
+    start = time.time()
     url = '{0}/trades/{1}usd?timestamp={2}&limit_trades={3}'\
         .format(api, symbol, last_timestamp, limit)
     try:
@@ -46,4 +47,6 @@ while True:
                 ltc_trades.update_one({'_id': trade['_id']},
                                       {'$setOnInsert': trade}, upsert=True)
             last_timestamp = trades[0]['timestamp'] - 5
-            time.sleep(60)
+            time_delta = time.time()-start
+            if time_delta < 1.0:
+                time.sleep(1-time_delta)
