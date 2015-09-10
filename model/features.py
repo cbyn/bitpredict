@@ -8,6 +8,8 @@ import pickle
 
 # TODO
 # time-weight trades
+# feature for number of trades
+# include 60 seconds of trades
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -198,7 +200,8 @@ def check_times(books):
     return time_diff
 
 
-def make_features(symbol, sample, mid_offsets, trades_offsets, live=False):
+def make_features(symbol, sample, mid_offsets,
+                  trades_offsets, powers, live=False):
     '''
     Returns a DataFrame with targets and features; sort_order should only be
     changed when using for live predictions
@@ -228,12 +231,15 @@ def make_features(symbol, sample, mid_offsets, trades_offsets, live=False):
         books = books.dropna()
         print 'offset mids run time:', (time()-stage)/60, 'minutes'
         stage = time()
-    books['imbalance2'] = get_power_imbalance(books, 10, 2)
-    books['adjusted_price2'] = get_power_adjusted_price(books, 10, 2)
-    books['adjusted_price2'] = (books.adjusted_price2/books.mid).apply(log)
-    books['imbalance8'] = get_power_imbalance(books, 10, 8)
-    books['adjusted_price8'] = get_power_adjusted_price(books, 10, 8)
-    books['adjusted_price8'] = (books.adjusted_price8/books.mid).apply(log)
+    for p in powers:
+        books['imbalance{}'.format(p)] = get_power_imbalance(books, 10, p)
+        books[
+            'adjusted_price{}'.format(p)] = get_power_adjusted_price(
+            books,
+            10,
+            p)
+        books['adjusted_price{}'.format(p)] = \
+            (books['adjusted_price{}'.format(p)]/books.mid).apply(log)
     if not live:
         print 'power calcs run time:', (time()-stage)/60, 'minutes'
         stage = time()
@@ -261,7 +267,8 @@ def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
                          mid_offsets=[30],
-                         trades_offsets=[10, 30, 120, 300])
+                         trades_offsets=[10, 30, 60, 120, 300],
+                         powers=[0, 2, 4, 8])
     return data
 
 if __name__ == '__main__' and len(sys.argv) == 4:
