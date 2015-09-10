@@ -7,7 +7,7 @@ from scipy.stats import linregress
 import pickle
 
 # TODO
-# investigate imbalance2 nans
+# time-weight trades
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -68,16 +68,18 @@ def get_imbalance(books, n=5):
     return imbalance
 
 
-def get_imbalance2(books, n=10):
+def get_power_imbalance(books, n=10, power=2):
     '''
     Returns a measure of the imbalance between bids and offers for each data
-    point in DataFrame of book data
+    point in DataFrame of book data; volumes are additionally weighed by
+    closeness to the midpoint
+
     '''
     start = time()
 
     def calc_imbalance(book):
         def calc(x):
-            return x.amount*(.5*book.width/(x.price-book.mid))**2
+            return x.amount*(.5*book.width/(x.price-book.mid))**power
         bid_imbalance = book.bids.iloc[:n].apply(calc, axis=1)
         ask_imbalance = book.asks.iloc[:n].apply(calc, axis=1)
         return (bid_imbalance-ask_imbalance).sum()
@@ -105,16 +107,17 @@ def get_adjusted_price(books, n=5):
     return adjusted
 
 
-def get_adjusted_price2(books, n=10):
+def get_power_adjusted_price(books, n=10, power=2):
     '''
     Returns an average of price weighted by inverse volume for each data point
-    in DataFrame of book data
+    in DataFrame of book data; volumes are additionally weighed by closeness
+    to the midpoint
     '''
     start = time()
 
     def calc_adjusted_price(book):
         def calc(x):
-            return x.amount*(.5*book.width/(x.price-book.mid))**2
+            return x.amount*(.5*book.width/(x.price-book.mid))**power
         bid_inv = 1/book.bids.iloc[:n].apply(calc, axis=1)
         ask_inv = 1/book.asks.iloc[:n].apply(calc, axis=1)
         bid_price = book.bids.price.iloc[:n]
@@ -233,12 +236,12 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
             .apply(log).fillna(0)  # Fill prev NaNs with zero (assume no change)
     # Drop observations where y is NaN
     books = books.dropna()
-    books['imbalance'] = get_imbalance(books)
-    books['imbalance2'] = get_imbalance2(books)
-    books['adjusted_price'] = get_adjusted_price(books)
-    books['adjusted_price'] = (books.adjusted_price/books.mid).apply(log)
-    books['adjusted_price2'] = get_adjusted_price2(books)
+    books['imbalance2'] = get_power_imbalance(books, 10, 2)
+    books['adjusted_price2'] = get_power_adjusted_price(books, 10, 2)
     books['adjusted_price2'] = (books.adjusted_price2/books.mid).apply(log)
+    books['imbalance8'] = get_power_imbalance(books, 10, 8)
+    books['adjusted_price8'] = get_power_adjusted_price(books, 10, 8)
+    books['adjusted_price8'] = (books.adjusted_price8/books.mid).apply(log)
 
     # Trade related features:
     min_ts = books.index[0] - trades_offsets[-1]
@@ -253,14 +256,14 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
         books['trend{}'.format(n)] = get_trend(books, trades, n)
     print 'make_features run time:', (time()-start)/60, 'minutes'
 
-    return books.drop(['bids', 'asks', 'mid'], axis=1)
+    return books.drop(['bids', 'asks'], axis=1)
 
 
 def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
-                         mid_offsets=[10],
-                         trades_offsets=[30, 120])
+                         mid_offsets=[30],
+                         trades_offsets=[10, 30, 120, 300])
     return data
 
 if __name__ == '__main__' and len(sys.argv) == 4:
