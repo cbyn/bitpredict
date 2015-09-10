@@ -12,7 +12,12 @@ predictions = db[symbol+'_predictions']
 # Need to import a pickled model
 while True:
     start = time.time()
-    data = f.make_features(symbol, 1, [duration], [10, 30, 120, 300], True)
+    data = f.make_features(symbol,
+                           1,
+                           [duration],
+                           [10, 30, 120, 300],
+                           [0, 2, 4, 8],
+                           True)
     current_price = data.pop('mid').iloc[0]
     pred = 0
     entry = {'prediction': pred,
