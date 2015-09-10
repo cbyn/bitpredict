@@ -231,9 +231,9 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
             get_future_mid(books, n, sensitivity=1)
         books['mid{}'.format(n)] = \
             (books['mid{}'.format(n)]/books.mid).apply(log)
-        books['prev{}'.format(n)] = get_future_mid(books, -n, sensitivity=1)
-        books['prev{}'.format(n)] = (books.mid/books['prev{}'.format(n)])\
-            .apply(log).fillna(0)  # Fill prev NaNs with zero (assume no change)
+        # books['prev{}'.format(n)] = get_future_mid(books, -n, sensitivity=1)
+        # books['prev{}'.format(n)] = (books.mid/books['prev{}'.format(n)])\
+        #     .apply(log).fillna(0)  # Fill prev NaNs with zero (assume no change)
     # Drop observations where y is NaN
     books = books.dropna()
     books['imbalance2'] = get_power_imbalance(books, 10, 2)
@@ -243,17 +243,17 @@ def make_features(symbol, sample, mid_offsets, trades_offsets):
     books['adjusted_price8'] = get_power_adjusted_price(books, 10, 8)
     books['adjusted_price8'] = (books.adjusted_price8/books.mid).apply(log)
 
-    # Trade related features:
-    min_ts = books.index[0] - trades_offsets[-1]
-    max_ts = books.index[-1]
-    trades = get_trade_df(symbol, min_ts, max_ts)
-    # Fill trade NaNs with zero (there are no trades in range)
-    for n in trades_offsets:
-        books['trades{}'.format(n)] = get_trades_average(books, trades, n)
-        books['trades{}'.format(n)] = \
-            (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
-        books['aggressor{}'.format(n)] = get_aggressor(books, trades, n)
-        books['trend{}'.format(n)] = get_trend(books, trades, n)
+    # # Trade related features:
+    # min_ts = books.index[0] - trades_offsets[-1]
+    # max_ts = books.index[-1]
+    # trades = get_trade_df(symbol, min_ts, max_ts)
+    # # Fill trade NaNs with zero (there are no trades in range)
+    # for n in trades_offsets:
+    #     books['trades{}'.format(n)] = get_trades_average(books, trades, n)
+    #     books['trades{}'.format(n)] = \
+    #         (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
+    #     books['aggressor{}'.format(n)] = get_aggressor(books, trades, n)
+    #     books['trend{}'.format(n)] = get_trend(books, trades, n)
     print 'make_features run time:', (time()-start)/60, 'minutes'
 
     return books.drop(['bids', 'asks'], axis=1)
