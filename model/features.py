@@ -149,6 +149,25 @@ def get_trades_in_range(trades, ts, offset, live=False):
     return trades
 
 
+def get_trades_indexes(books, trades, offset, live=False):
+    '''
+    Returns indexes of trades in offset range for each data point in DataFrame
+    of book data
+    '''
+    if trades.empty:
+        return trades
+
+    def indexes(ts):
+        ts = int(ts)
+        i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
+        if live:
+            i_n = -1
+        else:
+            i_n = trades.timestamp.searchsorted([ts-1], side='right')[0]
+        return (i_0, i_n)
+    return books.index.map(indexes)
+
+
 # def get_trades_count(books, trades, offset, live=False):
 #     '''
 #     Returns the number of trades that occured over the offset period for each
@@ -269,7 +288,7 @@ def make_features(symbol, sample, mid_offsets,
     trades = get_trade_df(symbol, min_ts, max_ts)
     # Fill trade NaNs with zero (there are no trades in range)
     for n in trades_offsets:
-        # books['count{}'.format(n)] = get_trades_count(books, trades, n, live)
+        books['indexes'] = get_trades_indexes(books, trades, n, live)
         books['trades{}'.format(n)] = get_trades_average(books, trades, n, live)
         books['trades{}'.format(n)] = \
             (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
