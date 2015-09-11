@@ -7,9 +7,7 @@ from scipy.stats import linregress
 import pickle
 
 # TODO
-# trade calcs in batches (temp store of trades_n)
 # trade count feature
-# multiprocessing
 # time-weight trades
 
 client = pymongo.MongoClient()
@@ -51,20 +49,6 @@ def get_future_mid(books, offset, sensitivity):
     return books.index.map(future)
 
 
-# def get_imbalance(books, n=5):
-#     '''
-#     Returns a measure of the imbalance between bids and offers for each data
-#     point in DataFrame of book data
-#     '''
-#     start = time()
-
-#     def calc_imbalance(book):
-#         return (book.bids.amount.iloc[:n] - book.asks.amount.iloc[:n]).sum()
-#     imbalance = books.apply(calc_imbalance, axis=1)
-#     print 'get_imbalance run time:', (time()-start)/60, 'minutes'
-#     return imbalance
-
-
 def get_power_imbalance(books, n=10, power=2):
     '''
     Returns a measure of the imbalance between bids and offers for each data
@@ -81,23 +65,6 @@ def get_power_imbalance(books, n=10, power=2):
         return (bid_imbalance-ask_imbalance).sum()
     imbalance = books.apply(calc_imbalance, axis=1)
     return imbalance
-
-
-# def get_adjusted_price(books, n=5):
-#     '''
-#     Returns an average of price weighted by inverse volume for each data point
-#     in DataFrame of book data
-#     '''
-
-#     def calc_adjusted_price(book):
-#         bid_inv = 1/book.bids.amount.iloc[:n]
-#         ask_inv = 1/book.asks.amount.iloc[:n]
-#         bid_price = book.bids.price.iloc[:n]
-#         ask_price = book.asks.price.iloc[:n]
-#         return (bid_price*bid_inv + ask_price*ask_inv).sum() /\
-#             (bid_inv + ask_inv).sum()
-#     adjusted = books.apply(calc_adjusted_price, axis=1)
-#     return adjusted
 
 
 def get_power_adjusted_price(books, n=10, power=2):
@@ -135,21 +102,6 @@ def get_trade_df(symbol, min_ts, max_ts, convert_timestamps=False):
     return trades
 
 
-def get_trades_in_range(trades, ts, offset, live=False):
-    '''
-    Returns trades in a given timestamp range
-    '''
-    if not trades.empty:
-        ts = int(ts)
-        i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
-        if live:
-            i_n = -1
-        else:
-            i_n = trades.timestamp.searchsorted([ts-1], side='right')[0]
-        return trades.iloc[i_0:i_n]
-    return trades
-
-
 def get_trades_indexes(books, trades, offset, live=False):
     '''
     Returns indexes of trades in offset range for each data point in DataFrame
@@ -160,13 +112,31 @@ def get_trades_indexes(books, trades, offset, live=False):
 
     def indexes(ts):
         ts = int(ts)
-        i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
         if live:
-            i_n = -1
+            return trades[trades.timestamp > ts-offset]
         else:
-            i_n = trades.timestamp.searchsorted([ts-1], side='right')[0]
-        return (i_0, i_n)
+            return trades[trades.timestamp > ts-offset &
+                          trades.timestamp < ts-1]
+        # ts = int(ts)
+        # i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
+        # if live:
+        #     i_n = -1
+        # else:
+        #     i_n = trades.timestamp.searchsorted([ts-1], side='right')[0]
+        # return (i_0, i_n)
     return books.index.map(indexes)
+
+
+def get_trades_count(books, trades):
+    '''
+    Returns a count of trades for each data point in DataFrame of book data
+    '''
+    if trades.empty:
+        return 0
+
+    def count(x):
+        return x.indexes[1]-x.indexes[0]+1
+    return books.apply(mean_trades, axis=1)
 
 
 def get_trades_average(books, trades):
@@ -282,11 +252,11 @@ def make_features(symbol, sample, mid_offsets,
     # Fill trade NaNs with zero (there are no trades in range)
     for n in trades_offsets:
         books['indexes'] = get_trades_indexes(books, trades, n, live)
-        books['trades{}'.format(n)] = get_trades_average(books, trades)
-        books['trades{}'.format(n)] = \
-            (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
-        books['aggressor{}'.format(n)] = get_aggressor(books, trades)
-        books['trend{}'.format(n)] = get_trend(books, trades)
+        # books['trades{}'.format(n)] = get_trades_average(books, trades)
+        # books['trades{}'.format(n)] = \
+        #     (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
+        # books['aggressor{}'.format(n)] = get_aggressor(books, trades)
+        # books['trend{}'.format(n)] = get_trend(books, trades)
     if not live:
         print 'trade features run time:', (time()-stage)/60, 'minutes'
         stage = time()
