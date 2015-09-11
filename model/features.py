@@ -112,18 +112,12 @@ def get_trades_indexes(books, trades, offset, live=False):
 
     def indexes(ts):
         ts = int(ts)
+        i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
         if live:
-            return trades[trades.timestamp > ts-offset]
+            i_n = -1
         else:
-            return trades[trades.timestamp > ts-offset &
-                          trades.timestamp < ts-1]
-        # ts = int(ts)
-        # i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
-        # if live:
-        #     i_n = -1
-        # else:
-        #     i_n = trades.timestamp.searchsorted([ts-1], side='right')[0]
-        # return (i_0, i_n)
+            i_n = trades.timestamp.searchsorted([ts-1], side='right')[0]
+        return (i_0, i_n)
     return books.index.map(indexes)
 
 
@@ -135,8 +129,8 @@ def get_trades_count(books, trades):
         return 0
 
     def count(x):
-        return x.indexes[1]-x.indexes[0]+1
-    return books.apply(mean_trades, axis=1)
+        return len(trades.iloc[x.indexes[0]:x.indexes[1]])
+    return books.apply(count, axis=1)
 
 
 def get_trades_average(books, trades):
@@ -252,11 +246,12 @@ def make_features(symbol, sample, mid_offsets,
     # Fill trade NaNs with zero (there are no trades in range)
     for n in trades_offsets:
         books['indexes'] = get_trades_indexes(books, trades, n, live)
-        # books['trades{}'.format(n)] = get_trades_average(books, trades)
-        # books['trades{}'.format(n)] = \
-        #     (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
-        # books['aggressor{}'.format(n)] = get_aggressor(books, trades)
-        # books['trend{}'.format(n)] = get_trend(books, trades)
+        books['trade_count{}'.format(n)] = get_trades_count(books, trades)
+        books['trades{}'.format(n)] = get_trades_average(books, trades)
+        books['trades{}'.format(n)] = \
+            (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
+        books['aggressor{}'.format(n)] = get_aggressor(books, trades)
+        books['trend{}'.format(n)] = get_trend(books, trades)
     if not live:
         print 'trade features run time:', (time()-stage)/60, 'minutes'
         stage = time()
@@ -269,7 +264,7 @@ def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
                          mid_offsets=[30],
-                         trades_offsets=[10, 30, 60, 120, 300],
+                         trades_offsets=[30, 60, 180, 300],
                          powers=[0, 2, 4, 8])
     return data
 
