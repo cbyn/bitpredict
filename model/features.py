@@ -134,46 +134,51 @@ def get_trade_df(symbol, min_ts, max_ts, convert_timestamps=False):
     return trades
 
 
-def get_trades_in_range(trades, ts, offset):
+def get_trades_in_range(trades, ts, offset, live=False):
     '''
     Returns trades in a given timestamp range
     '''
-    ts = int(ts)
-    i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
-    i_n = trades.timestamp.searchsorted([ts-1], side='right')[0]
-    return trades.iloc[i_0:i_n]
+    if not trades.empty:
+        ts = int(ts)
+        i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
+        if live:
+            i_n = -1
+        else:
+            i_n = trades.timestamp.searchsorted([ts-1], side='right')[0]
+        return trades.iloc[i_0:i_n]
+    return trades
 
 
-def get_trades_count(books, trades, offset):
-    '''
-    Returns the number of trades that occured over the offset period for each
-    data point in a DataFrame of book data
-    '''
-    def count(ts):
-        return len(get_trades_in_range(trades, ts, offset))
+# def get_trades_count(books, trades, offset, live=False):
+#     '''
+#     Returns the number of trades that occured over the offset period for each
+#     data point in a DataFrame of book data
+#     '''
+#     def count(ts):
+#         return len(get_trades_in_range(trades, ts, offset, live))
 
 
-def get_trades_average(books, trades, offset):
+def get_trades_average(books, trades, offset, live=False):
     '''
     Returns a volume-weighted average of trades for each data point in
     DataFrame of book data
     '''
 
     def mean_trades(ts):
-        trades_n = get_trades_in_range(trades, ts, offset)
+        trades_n = get_trades_in_range(trades, ts, offset, live)
         if not trades_n.empty:
             return (trades_n.price*trades_n.amount).sum()/trades_n.amount.sum()
     return books.index.map(mean_trades)
 
 
-def get_aggressor(books, trades, offset):
+def get_aggressor(books, trades, offset, live=False):
     '''
     Returns a measure of whether trade aggressors were buyers or sellers for
     each data point in DataFrame of book data
     '''
 
     def aggressor(ts):
-        trades_n = get_trades_in_range(trades, ts, offset)
+        trades_n = get_trades_in_range(trades, ts, offset, live)
         if not trades_n.empty:
             buys = trades_n['type'] == 'buy'
             buy_vol = trades_n[buys].amount.sum()
@@ -183,14 +188,14 @@ def get_aggressor(books, trades, offset):
     return books.index.map(aggressor)
 
 
-def get_trend(books, trades, offset):
+def get_trend(books, trades, offset, live=False):
     '''
     Returns the linear trend in previous trades for each data point in
     DataFrame of book data
     '''
 
     def trend(ts):
-        trades_n = get_trades_in_range(trades, ts, offset)
+        trades_n = get_trades_in_range(trades, ts, offset, live)
         if len(trades_n) < 3:
             return 0
         else:
@@ -259,15 +264,17 @@ def make_features(symbol, sample, mid_offsets,
     # Trade related features:
     min_ts = books.index[0] - trades_offsets[-1]
     max_ts = books.index[-1]
+    if live:
+        max_ts += 10
     trades = get_trade_df(symbol, min_ts, max_ts)
     # Fill trade NaNs with zero (there are no trades in range)
     for n in trades_offsets:
-        books['count{}'.format(n)] = get_trades_count(books, trades, n)
-        books['trades{}'.format(n)] = get_trades_average(books, trades, n)
+        # books['count{}'.format(n)] = get_trades_count(books, trades, n, live)
+        books['trades{}'.format(n)] = get_trades_average(books, trades, n, live)
         books['trades{}'.format(n)] = \
             (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
-        books['aggressor{}'.format(n)] = get_aggressor(books, trades, n)
-        books['trend{}'.format(n)] = get_trend(books, trades, n)
+        books['aggressor{}'.format(n)] = get_aggressor(books, trades, n, live)
+        books['trend{}'.format(n)] = get_trend(books, trades, n, live)
     if not live:
         print 'trade features run time:', (time()-stage)/60, 'minutes'
         stage = time()
