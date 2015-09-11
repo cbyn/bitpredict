@@ -1,11 +1,19 @@
 import pandas as pd
 import pymongo
 import itertools
+from sklearn.metrics import r2_score
+from math import log
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
 predictions = db['btc_predictions']
-cursor = predictions.find()
+
+cursor = predictions.find().limit(30000).sort('_id', pymongo.DESCENDING)
+df = pd.DataFrame(list(cursor))
+df = df[df.future_price != 0]
+df['actual'] = (df.future_price/df.current_price).apply(log)
+score = r2_score(df.actual.values, df.prediction)
+print 'r^2:', score
 
 
 def grouper(n, iterable):
@@ -15,12 +23,3 @@ def grouper(n, iterable):
         if not chunk:
             return
         yield chunk
-
-while cursor.alive:
-    df = pd.DataFrame(grouper(100, cursor))
-    print len(df)
-    df.head(10), '/n'
-
-# for chunk in pd.read_table(cursor, chunksize=100):
-#     print len(chunk)
-#     print chunk.head()
