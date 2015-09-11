@@ -7,9 +7,9 @@ from scipy.stats import linregress
 import pickle
 
 # TODO
+# trade calcs in batches (temp store of trades_n)
+# multiprocessing
 # time-weight trades
-# feature for number of trades
-# include 60 seconds of trades
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -144,6 +144,15 @@ def get_trades_in_range(trades, ts, offset):
     return trades.iloc[i_0:i_n]
 
 
+def get_trades_count(books, trades, offset):
+    '''
+    Returns the number of trades that occured over the offset period for each
+    data point in a DataFrame of book data
+    '''
+    def count(ts):
+        return len(get_trades_in_range(trades, ts, offset))
+
+
 def get_trades_average(books, trades, offset):
     '''
     Returns a volume-weighted average of trades for each data point in
@@ -253,6 +262,7 @@ def make_features(symbol, sample, mid_offsets,
     trades = get_trade_df(symbol, min_ts, max_ts)
     # Fill trade NaNs with zero (there are no trades in range)
     for n in trades_offsets:
+        books['count{}'.format(n)] = get_trades_count(books, trades, n)
         books['trades{}'.format(n)] = get_trades_average(books, trades, n)
         books['trades{}'.format(n)] = \
             (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
