@@ -30,8 +30,8 @@ while True:
     predictions.update_one({'_id': data.index[0]},
                            {'$setOnInsert': entry},
                            upsert=True)
-    predictions.update_many({'_id': {'$lt': start-duration+1,
-                                     '$gt': start-duration-1}},
+    predictions.update_many({'_id': {'$gt': start-duration-.5,
+                                     '$lt': start-duration+.5}},
                             {'$set': {'future_price': current_price}})
     time_delta = time.time()-start
     if time_delta < 1.0:
