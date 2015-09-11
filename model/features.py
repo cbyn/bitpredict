@@ -8,6 +8,7 @@ import pickle
 
 # TODO
 # trade calcs in batches (temp store of trades_n)
+# trade count feature
 # multiprocessing
 # time-weight trades
 
@@ -168,58 +169,49 @@ def get_trades_indexes(books, trades, offset, live=False):
     return books.index.map(indexes)
 
 
-# def get_trades_count(books, trades, offset, live=False):
-#     '''
-#     Returns the number of trades that occured over the offset period for each
-#     data point in a DataFrame of book data
-#     '''
-#     def count(ts):
-#         return len(get_trades_in_range(trades, ts, offset, live))
-
-
-def get_trades_average(books, trades, offset, live=False):
+def get_trades_average(books, trades):
     '''
     Returns a volume-weighted average of trades for each data point in
     DataFrame of book data
     '''
 
-    def mean_trades(ts):
-        trades_n = get_trades_in_range(trades, ts, offset, live)
+    def mean_trades(x):
+        trades_n = trades.iloc[x.indexes[0]:x.indexes[1]]
         if not trades_n.empty:
             return (trades_n.price*trades_n.amount).sum()/trades_n.amount.sum()
-    return books.index.map(mean_trades)
+    return books.apply(mean_trades, axis=1)
 
 
-def get_aggressor(books, trades, offset, live=False):
+def get_aggressor(books, trades):
     '''
     Returns a measure of whether trade aggressors were buyers or sellers for
     each data point in DataFrame of book data
     '''
 
-    def aggressor(ts):
-        trades_n = get_trades_in_range(trades, ts, offset, live)
+    def aggressor(x):
+        trades_n = trades.iloc[x.indexes[0]:x.indexes[1]]
         if not trades_n.empty:
             buys = trades_n['type'] == 'buy'
             buy_vol = trades_n[buys].amount.sum()
             sell_vol = trades_n[~buys].amount.sum()
             return buy_vol - sell_vol
         return 0
-    return books.index.map(aggressor)
+    return books.apply(aggressor, axis=1)
 
 
-def get_trend(books, trades, offset, live=False):
+def get_trend(books, trades):
     '''
     Returns the linear trend in previous trades for each data point in
     DataFrame of book data
     '''
 
-    def trend(ts):
-        trades_n = get_trades_in_range(trades, ts, offset, live)
+    def trend(x):
+        trades_n = trades.iloc[x.indexes[0]:x.indexes[1]]
         if len(trades_n) < 3:
             return 0
         else:
             return linregress(trades_n.index.values, trades_n.price.values)[0]
-    return books.index.map(trend)
+    return books.apply(trend, axis=1)
 
 
 def check_times(books):
@@ -279,6 +271,7 @@ def make_features(symbol, sample, mid_offsets,
     if not live:
         print 'power calcs run time:', (time()-stage)/60, 'minutes'
         stage = time()
+    books = books.drop(['bids', 'asks'], axis=1)
 
     # Trade related features:
     min_ts = books.index[0] - trades_offsets[-1]
@@ -289,17 +282,17 @@ def make_features(symbol, sample, mid_offsets,
     # Fill trade NaNs with zero (there are no trades in range)
     for n in trades_offsets:
         books['indexes'] = get_trades_indexes(books, trades, n, live)
-        books['trades{}'.format(n)] = get_trades_average(books, trades, n, live)
+        books['trades{}'.format(n)] = get_trades_average(books, trades)
         books['trades{}'.format(n)] = \
             (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
-        books['aggressor{}'.format(n)] = get_aggressor(books, trades, n, live)
-        books['trend{}'.format(n)] = get_trend(books, trades, n, live)
+        books['aggressor{}'.format(n)] = get_aggressor(books, trades)
+        books['trend{}'.format(n)] = get_trend(books, trades)
     if not live:
         print 'trade features run time:', (time()-stage)/60, 'minutes'
         stage = time()
         print 'make_features run time:', (time()-start)/60, 'minutes'
 
-    return books.drop(['bids', 'asks'], axis=1)
+    return books.drop('indexes', axis=1)
 
 
 def make_data(symbol, sample):
