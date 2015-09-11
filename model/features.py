@@ -127,9 +127,10 @@ def get_trade_df(symbol, min_ts, max_ts, convert_timestamps=False):
     query = {'timestamp': {'$gt': min_ts, '$lt': max_ts}}
     cursor = trades_db.find(query).sort('_id', pymongo.ASCENDING)
     trades = pd.DataFrame(list(cursor))
-    trades = trades.set_index('_id')
-    if convert_timestamps:
-        trades.index = pd.to_datetime(trades.index, unit='s')
+    if not trades.empty:
+        trades = trades.set_index('_id')
+        if convert_timestamps:
+            trades.index = pd.to_datetime(trades.index, unit='s')
     return trades
 
 
@@ -164,10 +165,12 @@ def get_aggressor(books, trades, offset):
 
     def aggressor(ts):
         trades_n = get_trades_in_range(trades, ts, offset)
-        buys = trades_n['type'] == 'buy'
-        buy_vol = trades_n[buys].amount.sum()
-        sell_vol = trades_n[~buys].amount.sum()
-        return buy_vol - sell_vol
+        if not trades_n.empty:
+            buys = trades_n['type'] == 'buy'
+            buy_vol = trades_n[buys].amount.sum()
+            sell_vol = trades_n[~buys].amount.sum()
+            return buy_vol - sell_vol
+        return 0
     return books.index.map(aggressor)
 
 
