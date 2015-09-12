@@ -145,12 +145,12 @@ def get_aggressor(books, trades):
 
     def aggressor(x):
         trades_n = trades.iloc[x.indexes[0]:x.indexes[1]]
-        if not trades_n.empty:
-            buys = trades_n['type'] == 'buy'
-            buy_vol = trades_n[buys].amount.sum()
-            sell_vol = trades_n[~buys].amount.sum()
-            return buy_vol - sell_vol
-        return 0
+        if trades_n.empty:
+            return 0
+        buys = trades_n['type'] == 'buy'
+        buy_vol = trades_n[buys].amount.sum()
+        sell_vol = trades_n[~buys].amount.sum()
+        return buy_vol - sell_vol
     return books.apply(aggressor, axis=1)
 
 
@@ -222,11 +222,17 @@ def make_features(symbol, sample, mid_offsets,
         max_ts += 10
     trades = get_trade_df(symbol, min_ts, max_ts)
     for n in trades_offsets:
-        books['indexes'] = get_trades_indexes(books, trades, n, live)
-        books['t{}_count'.format(n)] = get_trades_count(books, trades)
-        books['t{}_av'.format(n)] = get_trades_average(books, trades)
-        books['agg{}'.format(n)] = get_aggressor(books, trades)
-        books['trend{}'.format(n)] = get_trend(books, trades)
+        if trades.empty:
+            books['indexes'] = 0
+            books['t{}_count'.format(n)] = 0
+            books['t{}_av'.format(n)] = 0
+            books['agg{}'.format(n)] = 0
+        else:
+            books['indexes'] = get_trades_indexes(books, trades, n, live)
+            books['t{}_count'.format(n)] = get_trades_count(books, trades)
+            books['t{}_av'.format(n)] = get_trades_average(books, trades)
+            books['agg{}'.format(n)] = get_aggressor(books, trades)
+            books['trend{}'.format(n)] = get_trend(books, trades)
     if not live:
         print 'trade features run time:', (time()-stage)/60, 'minutes'
         stage = time()
@@ -236,6 +242,9 @@ def make_features(symbol, sample, mid_offsets,
 
 
 def make_data(symbol, sample):
+    '''
+    Convenience function for calling make_features
+    '''
     data = make_features(symbol,
                          sample=sample,
                          mid_offsets=[30],
