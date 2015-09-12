@@ -16,6 +16,9 @@ ltc_books = db[symbol+'_books']
 
 
 def format_book_entry(entry):
+    '''
+    Converts book data to float
+    '''
     if all(key in entry for key in ('amount', 'price', 'timestamp')):
         entry['amount'] = float(entry['amount'])
         entry['price'] = float(entry['price'])
@@ -24,6 +27,9 @@ def format_book_entry(entry):
 
 
 def get_json(url):
+    '''
+    Gets json from the API
+    '''
     resp = urllib2.urlopen(url)
     return json.load(resp, object_hook=format_book_entry), resp.getcode()
 
