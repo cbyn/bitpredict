@@ -14,6 +14,9 @@ ltc_trades = db[symbol+'_trades']
 
 
 def format_trade(trade):
+    '''
+    Formats trade data
+    '''
     if all(key in trade for key in ('tid', 'amount', 'price', 'timestamp')):
         trade['_id'] = trade.pop('tid')
         trade['amount'] = float(trade['amount'])
@@ -24,6 +27,9 @@ def format_trade(trade):
 
 
 def get_json(url):
+    '''
+    Gets json from the API
+    '''
     resp = urllib2.urlopen(url)
     return json.load(resp, object_hook=format_trade), resp.getcode()
 
