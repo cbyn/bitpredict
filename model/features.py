@@ -10,12 +10,12 @@ client = pymongo.MongoClient()
 db = client['bitmicro']
 
 
-def get_book_df(symbol, limit, sort_order, convert_timestamps=False):
+def get_book_df(symbol, limit, convert_timestamps=False):
     '''
     Returns a DataFrame of book data
     '''
     books_db = db[symbol+'_books']
-    cursor = books_db.find().sort('_id', sort_order).limit(limit)
+    cursor = books_db.find().sort('_id', -1).limit(limit)
     books = pd.DataFrame(list(cursor))
     books = books.set_index('_id')
     if convert_timestamps:
@@ -23,7 +23,7 @@ def get_book_df(symbol, limit, sort_order, convert_timestamps=False):
 
     def to_df(x):
         return pd.DataFrame(x[:10])
-    return books.applymap(to_df)
+    return books.applymap(to_df).sort_index()
 
 
 def get_width_and_mid(books):
@@ -191,12 +191,12 @@ def make_features(symbol, sample, mid_offsets,
     '''
     start = time()
     stage = time()
-    if live:
-        sort_order = pymongo.DESCENDING
-    else:
-        sort_order = pymongo.ASCENDING
+
     # Book related features:
-    books = get_book_df(symbol, sample, sort_order)
+    books = get_book_df(symbol, sample)
+    if not live:
+        print 'get book data run time:', (time()-stage)/60, 'minutes'
+        stage = time()
     books['width'], books['mid'] = get_width_and_mid(books)
     if not live:
         print 'book, width and mid run time:', (time()-stage)/60, 'minutes'
