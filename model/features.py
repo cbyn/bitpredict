@@ -6,17 +6,13 @@ import sys
 from scipy.stats import linregress
 import pickle
 
-# TODO
-# trade count feature
-# time-weight trades
-
 client = pymongo.MongoClient()
 db = client['bitmicro']
 
 
 def get_book_df(symbol, limit, sort_order, convert_timestamps=False):
     '''
-    Returns a DataFrame of book data for symbol
+    Returns a DataFrame of book data
     '''
     books_db = db[symbol+'_books']
     cursor = books_db.find().sort('_id', sort_order).limit(limit)
@@ -32,8 +28,8 @@ def get_book_df(symbol, limit, sort_order, convert_timestamps=False):
 
 def get_width_and_mid(books):
     '''
-    Returns width of best market and midpoint for each data point in
-    DataFrame of book data
+    Returns width of best market and midpoint for each data point in DataFrame
+    of book data
     '''
     best_bid = books.bids.apply(lambda x: x.price[0])
     best_ask = books.asks.apply(lambda x: x.price[0])
@@ -42,22 +38,21 @@ def get_width_and_mid(books):
 
 def get_future_mid(books, offset, sensitivity):
     '''
-    Returns future midpoints for each data point in DataFrame of book data
+    Returns percent change of future midpoints for each data point in DataFrame
+    of book data
     '''
 
     def future(timestamp):
         i = books.index.get_loc(timestamp+offset, method='nearest')
         if abs(books.index[i] - (timestamp+offset)) < sensitivity:
             return books.mid.iloc[i]
-    return books.index.map(future)
+    return (books.index.map(future)/books.mid).apply(log)
 
 
 def get_power_imbalance(books, n=10, power=2):
     '''
     Returns a measure of the imbalance between bids and offers for each data
-    point in DataFrame of book data; volumes are additionally weighed by
-    closeness to the midpoint
-
+    point in DataFrame of book data
     '''
 
     def calc_imbalance(book):
@@ -72,9 +67,8 @@ def get_power_imbalance(books, n=10, power=2):
 
 def get_power_adjusted_price(books, n=10, power=2):
     '''
-    Returns an average of price weighted by inverse volume for each data point
-    in DataFrame of book data; volumes are additionally weighed by closeness
-    to the midpoint
+    Returns the percent change of an average of order prices weighted by inverse
+    distance-wieghted volume for each data point in DataFrame of book data
     '''
 
     def calc_adjusted_price(book):
@@ -87,7 +81,7 @@ def get_power_adjusted_price(books, n=10, power=2):
         return (bid_price*bid_inv + ask_price*ask_inv).sum() /\
             (bid_inv + ask_inv).sum()
     adjusted = books.apply(calc_adjusted_price, axis=1)
-    return adjusted
+    return (adjusted/books.mid).apply(log).fillna(0)
 
 
 def get_trade_df(symbol, min_ts, max_ts, convert_timestamps=False):
@@ -110,9 +104,6 @@ def get_trades_indexes(books, trades, offset, live=False):
     Returns indexes of trades in offset range for each data point in DataFrame
     of book data
     '''
-    if trades.empty:
-        return trades
-
     def indexes(ts):
         ts = int(ts)
         i_0 = trades.timestamp.searchsorted([ts-offset], side='left')[0]
@@ -128,9 +119,6 @@ def get_trades_count(books, trades):
     '''
     Returns a count of trades for each data point in DataFrame of book data
     '''
-    if trades.empty:
-        return 0
-
     def count(x):
         return len(trades.iloc[x.indexes[0]:x.indexes[1]])
     return books.apply(count, axis=1)
@@ -138,15 +126,15 @@ def get_trades_count(books, trades):
 
 def get_trades_average(books, trades):
     '''
-    Returns a volume-weighted average of trades for each data point in
-    DataFrame of book data
+    Returns the percent change of a volume-weighted average of trades for each
+    data point in DataFrame of book data
     '''
 
     def mean_trades(x):
         trades_n = trades.iloc[x.indexes[0]:x.indexes[1]]
         if not trades_n.empty:
             return (trades_n.price*trades_n.amount).sum()/trades_n.amount.sum()
-    return books.apply(mean_trades, axis=1)
+    return (books.mid/books.apply(mean_trades, axis=1)).apply(log).fillna(0)
 
 
 def get_aggressor(books, trades):
@@ -168,8 +156,8 @@ def get_aggressor(books, trades):
 
 def get_trend(books, trades):
     '''
-    Returns the linear trend in previous trades for each data point in
-    DataFrame of book data
+    Returns the linear trend in previous trades for each data point in DataFrame
+    of book data
     '''
 
     def trend(x):
@@ -184,6 +172,7 @@ def get_trend(books, trades):
 def check_times(books):
     '''
     Returns list of differences between collection time and max book timestamps
+    for verification purposes
     '''
     time_diff = []
     for i in range(len(books)):
@@ -198,8 +187,7 @@ def check_times(books):
 def make_features(symbol, sample, mid_offsets,
                   trades_offsets, powers, live=False):
     '''
-    Returns a DataFrame with targets and features; sort_order should only be
-    changed when using for live predictions
+    Returns a DataFrame with targets and features
     '''
     start = time()
     stage = time()
@@ -214,43 +202,30 @@ def make_features(symbol, sample, mid_offsets,
         print 'book, width and mid run time:', (time()-stage)/60, 'minutes'
         stage = time()
     for n in mid_offsets:
-        books['mid{}'.format(n)] = \
-            get_future_mid(books, n, sensitivity=1)
-        books['mid{}'.format(n)] = \
-            (books['mid{}'.format(n)]/books.mid).apply(log)
+        books['mid{}'.format(n)] = get_future_mid(books, n, sensitivity=1)
     if not live:
-        # Drop observations where y is NaN
         books = books.dropna()
         print 'offset mids run time:', (time()-stage)/60, 'minutes'
         stage = time()
     for p in powers:
         books['imbalance{}'.format(p)] = get_power_imbalance(books, 10, p)
-        books[
-            'adjusted_price{}'.format(p)] = get_power_adjusted_price(
-            books,
-            10,
-            p)
-        books['adjusted_price{}'.format(p)] = \
-            (books['adjusted_price{}'.format(p)]/books.mid).apply(log)
+        books['adj_price{}'.format(p)] = get_power_adjusted_price(books, 10, p)
     if not live:
         print 'power calcs run time:', (time()-stage)/60, 'minutes'
         stage = time()
     books = books.drop(['bids', 'asks'], axis=1)
 
     # Trade related features:
-    min_ts = books.index[0] - trades_offsets[-1]
-    max_ts = books.index[-1]
+    min_ts = books.index.min() - trades_offsets[-1]
+    max_ts = books.index.max()
     if live:
         max_ts += 10
     trades = get_trade_df(symbol, min_ts, max_ts)
-    # Fill trade NaNs with zero (there are no trades in range)
     for n in trades_offsets:
         books['indexes'] = get_trades_indexes(books, trades, n, live)
-        books['trade_count{}'.format(n)] = get_trades_count(books, trades)
-        books['trades{}'.format(n)] = get_trades_average(books, trades)
-        books['trades{}'.format(n)] = \
-            (books.mid / books['trades{}'.format(n)]).apply(log).fillna(0)
-        books['aggressor{}'.format(n)] = get_aggressor(books, trades)
+        books['t{}_count'.format(n)] = get_trades_count(books, trades)
+        books['t{}_av'.format(n)] = get_trades_average(books, trades)
+        books['agg{}'.format(n)] = get_aggressor(books, trades)
         books['trend{}'.format(n)] = get_trend(books, trades)
     if not live:
         print 'trade features run time:', (time()-stage)/60, 'minutes'
@@ -264,8 +239,8 @@ def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
                          mid_offsets=[30],
-                         trades_offsets=[10, 30, 60, 180, 300],
-                         powers=[0, 2, 4, 8])
+                         trades_offsets=[30],
+                         powers=[2])
     return data
 
 if __name__ == '__main__' and len(sys.argv) == 4:
