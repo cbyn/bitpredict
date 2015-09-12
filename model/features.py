@@ -199,7 +199,7 @@ def make_features(symbol, sample, mid_offsets,
         stage = time()
     books['width'], books['mid'] = get_width_and_mid(books)
     if not live:
-        print 'book, width and mid run time:', (time()-stage)/60, 'minutes'
+        print 'width and mid run time:', (time()-stage)/60, 'minutes'
         stage = time()
     for n in mid_offsets:
         books['mid{}'.format(n)] = get_future_mid(books, n, sensitivity=1)
