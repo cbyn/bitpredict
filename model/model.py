@@ -5,8 +5,8 @@ import pickle
 
 def cross_validate(X, y, model, window):
     '''
-    Cross validates time series data using a shifting window where train
-    data is always before test data
+    Cross validates time series data using a shifting window where train data is
+    always before test data
     '''
     in_sample_score = []
     out_sample_score = []
@@ -72,6 +72,9 @@ def run_models(data, window, drop_zeros=False):
 
 
 def print_feature_importances(fitted_model, labels):
+    '''
+    Returns labels sorted by feature importance
+    '''
     labels = np.array(labels)
     importances = fitted_model.feature_importances_
     indexes = np.argsort(importances)[::-1]
@@ -81,6 +84,9 @@ def print_feature_importances(fitted_model, labels):
 
 
 def get_pickle(filename):
+    '''
+    Pickle convenience function
+    '''
     with open(filename, 'r') as f:
         data = pickle.load(f)
     return data
