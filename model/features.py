@@ -24,7 +24,10 @@ def get_book_df(symbol, limit, sort_order, convert_timestamps=False):
     books = books.set_index('_id')
     if convert_timestamps:
         books.index = pd.to_datetime(books.index, unit='s')
-    return books.applymap(pd.DataFrame)
+
+    def to_df(x):
+        return pd.DataFrame(x[:10])
+    return books.applymap(to_df)
 
 
 def get_width_and_mid(books):
