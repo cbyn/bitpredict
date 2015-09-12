@@ -19,7 +19,7 @@ def get_book_df(symbol, limit, sort_order, convert_timestamps=False):
     Returns a DataFrame of book data for symbol
     '''
     books_db = db[symbol+'_books']
-    cursor = books_db.find().limit(limit).sort('_id', sort_order)
+    cursor = books_db.find().sort('_id', sort_order).limit(limit)
     books = pd.DataFrame(list(cursor))
     books = books.set_index('_id')
     if convert_timestamps:
@@ -215,9 +215,6 @@ def make_features(symbol, sample, mid_offsets,
             get_future_mid(books, n, sensitivity=1)
         books['mid{}'.format(n)] = \
             (books['mid{}'.format(n)]/books.mid).apply(log)
-        books['prev{}'.format(n)] = get_future_mid(books, -n, sensitivity=1)
-        books['prev{}'.format(n)] = (books.mid/books['prev{}'.format(n)])\
-            .apply(log).fillna(0)  # Fill prev NaNs with zero (assume no change)
     if not live:
         # Drop observations where y is NaN
         books = books.dropna()
@@ -264,7 +261,7 @@ def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
                          mid_offsets=[30],
-                         trades_offsets=[30, 60, 180, 300],
+                         trades_offsets=[10, 30, 60, 180, 300],
                          powers=[0, 2, 4, 8])
     return data
 
