@@ -227,6 +227,7 @@ def make_features(symbol, sample, mid_offsets,
             books['t{}_count'.format(n)] = 0
             books['t{}_av'.format(n)] = 0
             books['agg{}'.format(n)] = 0
+            books['trend{}'.format(n)] = 0
         else:
             books['indexes'] = get_trades_indexes(books, trades, n, live)
             books['t{}_count'.format(n)] = get_trades_count(books, trades)
