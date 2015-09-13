@@ -20,6 +20,10 @@ def cross_validate(X, y, model, window):
         model.fit(X_train, y_train)
         in_sample_score.append(model.score(X_train, y_train))
         out_sample_score.append(model.score(X_test, y_test))
+        print 'Window', i
+        print 'in-sample score', in_sample_score[-1]
+        print 'out-sample score:', out_sample_score[-1]
+        print '---'
     return model, np.mean(in_sample_score), np.mean(out_sample_score)
 
 
@@ -67,7 +71,7 @@ def run_models(data, window, drop_zeros=False):
     print '\nrandom forest regressor r^2:'
     for score in sorted(out_reg_scores):
         m = out_reg_scores[score]
-        print 'out-of-sample', m, score
+        print 'out-sample', m, score
         print 'in-sample', m, in_reg_scores[m], '\n'
 
 
