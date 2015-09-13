@@ -3,6 +3,7 @@ import pymongo
 import time
 import sys
 import pickle
+import numpy as np
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -20,11 +21,16 @@ while True:
     data = f.make_features(symbol,
                            1,
                            [duration],
-                           [10, 30, 60, 120, 180],
+                           [30, 60, 120, 180],
                            [2, 4, 8],
                            True)
     current_price = data.pop('mid').iloc[0]
-    pred = model.predict(data[cols].values)[0]
+    try:
+        pred = model.predict(data[cols].values)[0]
+    except Exception as e:
+        print e
+        sys.exc_clear()
+        pred = np.nan
     entry = {'prediction': pred,
              'current_price': current_price,
              'future_price': 0}
