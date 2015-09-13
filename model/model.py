@@ -32,7 +32,7 @@ def fit_regressor(X, y, window):
     Fits regressor model using cross validation
     '''
     model = RandomForestRegressor(n_estimators=100,
-                                  min_samples_leaf=500,
+                                  min_samples_leaf=250,
                                   random_state=42,
                                   n_jobs=-1)
     return cross_validate(X, y, model, window)
