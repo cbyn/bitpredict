@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 import pickle
 
 
@@ -27,18 +28,34 @@ def cross_validate(X, y, model, window):
     return model, np.mean(in_sample_score), np.mean(out_sample_score)
 
 
-def fit_regressor(X, y, window):
+def fit_forest(X, y, window, cross_validate=True):
     '''
-    Fits regressor model using cross validation
+    Fits Random Forest
     '''
     model = RandomForestRegressor(n_estimators=100,
                                   min_samples_leaf=250,
                                   random_state=42,
                                   n_jobs=-1)
-    return cross_validate(X, y, model, window)
+    if cross_validate:
+        return cross_validate(X, y, model, window)
+    return model.fit(X, y)
 
 
-def run_models(data, window, drop_zeros=False):
+def fit_boosting(X, y, window, cross_validate=True):
+    '''
+    Fits Gradient Boosting
+    '''
+    model = GradientBoostingRegressor(n_estimators=100,
+                                      min_samples_leaf=250,
+                                      max_depth=20,
+                                      random_state=42,
+                                      n_jobs=-1)
+    if cross_validate:
+        return cross_validate(X, y, model, window)
+    return model.fit(X, y)
+
+
+def run_models(data, window, model_function, drop_zeros=False):
     '''
     Runs cross-validated models with a range of target offsets and outputs
     results sorted by out-of-sample performance
@@ -64,7 +81,7 @@ def run_models(data, window, drop_zeros=False):
             X = X.join(prev)
             X = X.values
 
-        _, in_reg_score, out_reg_score = fit_regressor(X, y, window)
+        _, in_reg_score, out_reg_score = model_function(X, y, window)
         in_reg_scores[m] = in_reg_score
         out_reg_scores[out_reg_score] = m
 
