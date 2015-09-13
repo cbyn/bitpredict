@@ -14,13 +14,14 @@ with open('cols.pkl', 'r') as file1:
 with open('model.pkl', 'r') as file2:
     model = pickle.load(file2)
 
+print 'Running...'
 while True:
     start = time.time()
     data = f.make_features(symbol,
                            1,
                            [duration],
-                           [10, 30, 120, 300],
-                           [0, 2, 4, 8],
+                           [10, 30, 60, 120, 180],
+                           [2, 4, 8],
                            True)
     current_price = data.pop('mid').iloc[0]
     pred = model.predict(data[cols].values)[0]
