@@ -71,7 +71,7 @@ def run_models(data, window, drop_zeros=False):
         print 'in-sample', m, in_reg_scores[m], '\n'
 
 
-def print_feature_importances(fitted_model, labels):
+def get_feature_importances(fitted_model, labels):
     '''
     Returns labels sorted by feature importance
     '''
