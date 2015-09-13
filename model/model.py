@@ -48,8 +48,7 @@ def fit_boosting(X, y, window, cross_validate=True):
     model = GradientBoostingRegressor(n_estimators=100,
                                       min_samples_leaf=250,
                                       max_depth=20,
-                                      random_state=42,
-                                      n_jobs=-1)
+                                      random_state=42)
     if cross_validate:
         return cross_validate(X, y, model, window)
     return model.fit(X, y)
