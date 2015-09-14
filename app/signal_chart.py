@@ -17,6 +17,7 @@ y = data.prediction*100*100
 output_server('model_signal')
 p = figure(title='30-second Prediction',
            x_axis_type='datetime',
+           x_axis_label='Greenwich Time',
            y_axis_label='Basis Points')
 p.line(x, y, name='signal')
 show(p)
