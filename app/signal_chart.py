@@ -12,7 +12,7 @@ data = pd.DataFrame(list(cursor))
 data = data.set_index('_id')
 data = data.sort_index(ascending=True)
 x = pd.to_datetime(data.index, unit='s').to_series()
-y = data.prediction*100
+y = data.prediction*100*100
 
 output_server('model_signal')
 p = figure(title='30-second Prediction',
@@ -30,6 +30,6 @@ while True:
     data = data.set_index('_id')
     data = data.sort_index(ascending=True)
     ds.data['x'] = pd.to_datetime(data.index, unit='s').to_series()
-    ds.data['y'] = data.prediction*100
+    ds.data['y'] = data.prediction*100*100
     cursession().store_objects(ds)
     time.sleep(1)
