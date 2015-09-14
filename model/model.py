@@ -15,6 +15,7 @@ def cross_validate(X, y, model, window):
         train_index = np.arange(0, i*window)
         test_index = np.arange(i*window, (i+1)*window)
         y_train = y.take(train_index)
+        y_train = y_train - y_train.mean()
         y_test = y.take(test_index)
         X_train = X.take(train_index, axis=0)
         X_test = X.take(test_index, axis=0)
@@ -28,12 +29,13 @@ def cross_validate(X, y, model, window):
     return model, np.mean(in_sample_score), np.mean(out_sample_score)
 
 
-def fit_forest(X, y, window, validate=True):
+def fit_forest(X, y, window=100000, estimators=100,
+               samples_leaf=250, validate=True):
     '''
     Fits Random Forest
     '''
-    model = RandomForestRegressor(n_estimators=250,
-                                  min_samples_leaf=500,
+    model = RandomForestRegressor(n_estimators=estimators,
+                                  min_samples_leaf=samples_leaf,
                                   random_state=42,
                                   n_jobs=-1)
     if validate:
@@ -41,13 +43,14 @@ def fit_forest(X, y, window, validate=True):
     return model.fit(X, y)
 
 
-def fit_boosting(X, y, window, validate=True):
+def fit_boosting(X, y, window=100000, estimators=100,
+                 samples_leaf=250, depth=10, validate=True):
     '''
     Fits Gradient Boosting
     '''
-    model = GradientBoostingRegressor(n_estimators=100,
-                                      # min_samples_leaf=500,
-                                      max_depth=10,
+    model = GradientBoostingRegressor(n_estimators=estimators,
+                                      min_samples_leaf=samples_leaf,
+                                      max_depth=depth,
                                       random_state=42)
     if validate:
         return cross_validate(X, y, model, window)
