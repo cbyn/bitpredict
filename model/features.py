@@ -249,7 +249,7 @@ def make_data(symbol, sample):
     data = make_features(symbol,
                          sample=sample,
                          mid_offsets=[30],
-                         trades_offsets=[10, 30, 60, 120, 180],
+                         trades_offsets=[30, 60, 120, 180],
                          powers=[2, 4, 8])
     return data
 
