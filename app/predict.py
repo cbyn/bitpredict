@@ -30,7 +30,7 @@ while True:
         print e
         sys.exc_clear()
     else:
-        if data.width > 0:
+        if data.width.iloc[0] > 0:
             current_price = data.pop('mid').iloc[0]
             entry = {'prediction': pred,
                      'current_price': current_price,
