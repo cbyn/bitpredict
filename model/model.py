@@ -28,29 +28,28 @@ def cross_validate(X, y, model, window):
     return model, np.mean(in_sample_score), np.mean(out_sample_score)
 
 
-def fit_forest(X, y, window, cross_validate=True):
+def fit_forest(X, y, window, validate=True):
     '''
     Fits Random Forest
     '''
-    model = RandomForestRegressor(n_estimators=100,
-                                  min_samples_leaf=250,
+    model = RandomForestRegressor(n_estimators=250,
+                                  min_samples_leaf=500,
                                   random_state=42,
                                   n_jobs=-1)
-    if cross_validate:
+    if validate:
         return cross_validate(X, y, model, window)
     return model.fit(X, y)
 
 
-def fit_boosting(X, y, window, cross_validate=True):
+def fit_boosting(X, y, window, validate=True):
     '''
     Fits Gradient Boosting
     '''
     model = GradientBoostingRegressor(n_estimators=100,
-                                      min_samples_leaf=250,
-                                      max_depth=20,
-                                      random_state=42,
-                                      n_jobs=-1)
-    if cross_validate:
+                                      # min_samples_leaf=500,
+                                      max_depth=10,
+                                      random_state=42)
+    if validate:
         return cross_validate(X, y, model, window)
     return model.fit(X, y)
 
