@@ -15,7 +15,8 @@ def cross_validate(X, y, model, window):
         train_index = np.arange(0, i*window)
         test_index = np.arange(i*window, (i+1)*window)
         y_train = y.take(train_index)
-        y_train = y_train - y_train.mean()
+        # non_zero = y_train != 0
+        # y_train[non_zero] = y_train[non_zero] - y_train[non_zero].mean()
         y_test = y.take(test_index)
         X_train = X.take(train_index, axis=0)
         X_test = X.take(test_index, axis=0)
