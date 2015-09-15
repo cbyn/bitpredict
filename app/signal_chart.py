@@ -7,7 +7,7 @@ client = pymongo.MongoClient()
 db = client['bitmicro']
 predictions = db['btc_predictions']
 
-cursor = predictions.find().limit(60*60).sort('_id', pymongo.DESCENDING)
+cursor = predictions.find().limit(60*5).sort('_id', pymongo.DESCENDING)
 data = pd.DataFrame(list(cursor))
 data = data.set_index('_id')
 data = data.sort_index(ascending=True)
@@ -26,7 +26,7 @@ renderer = p.select(dict(name='signal'))
 ds = renderer[0].data_source
 
 while True:
-    cursor = predictions.find().limit(60*60).sort('_id', pymongo.DESCENDING)
+    cursor = predictions.find().limit(60*5).sort('_id', pymongo.DESCENDING)
     data = pd.DataFrame(list(cursor))
     data = data.set_index('_id')
     data = data.sort_index(ascending=True)

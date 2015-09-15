@@ -37,7 +37,7 @@ while True:
     else:
         if data.width.iloc[0] > 0:
             if active:
-                if trade_time-start >= 30:
+                if start - trade_time >= 30:
                     active = False
             elif abs(pred) > threshold:
                 active = True
