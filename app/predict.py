@@ -3,12 +3,14 @@ import pymongo
 import time
 import sys
 import pickle
+import numpy as np
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
 symbol = sys.argv[1]
 duration = int(sys.argv[2])
-predictions = db[symbol+'_predictions']
+threshold = float(sys.argv[3])
+predictions = db[symbol+'_predictions2']
 
 with open('cols.pkl', 'r') as file1:
     cols = pickle.load(file1)
@@ -16,8 +18,11 @@ with open('model.pkl', 'r') as file2:
     model = pickle.load(file2)
 
 print 'Running...'
+active = False
+trade_time = 0
 while True:
     start = time.time()
+    position = 0
     try:
         data = f.make_features(symbol,
                                1,
@@ -31,10 +36,18 @@ while True:
         sys.exc_clear()
     else:
         if data.width.iloc[0] > 0:
+            if active:
+                if trade_time-start >= 30:
+                    active = False
+            elif abs(pred) > threshold:
+                active = True
+                trade_time = time.time()
+                position = np.sign(pred)
             current_price = data.pop('mid').iloc[0]
             entry = {'prediction': pred,
                      'current_price': current_price,
-                     'future_price': 0}
+                     'future_price': 0,
+                     'position': position}
             predictions.update_one({'_id': data.index[0]},
                                    {'$setOnInsert': entry},
                                    upsert=True)
