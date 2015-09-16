@@ -10,7 +10,7 @@ db = client['bitmicro']
 symbol = sys.argv[1]
 duration = int(sys.argv[2])
 threshold = float(sys.argv[3])
-predictions = db[symbol+'_predictions2']
+predictions = db[symbol+'_predictions']
 
 with open('cols.pkl', 'r') as file1:
     cols = pickle.load(file1)
