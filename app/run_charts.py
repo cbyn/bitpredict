@@ -1,6 +1,6 @@
 import pandas as pd
 import pymongo
-from bokeh.plotting import cursession, figure, output_server, push
+from bokeh.plotting import cursession, figure, output_server
 from bokeh.models.formatters import DatetimeTickFormatter, PrintfTickFormatter
 from bokeh.io import vplot
 from bokeh import embed
@@ -29,9 +29,9 @@ timestamps, prices, predictions, returns = get_data()
 output_server('short_charts')
 
 background = '#f2f2f2'
-ylabel_standoff = 10
+ylabel_standoff = 1
 xformatter = DatetimeTickFormatter(formats=dict(minutes=["%H:%M"]))
-yformatter = PrintfTickFormatter(format="%+' 8.1f")
+yformatter = PrintfTickFormatter(format="%+7.1f")
 p1 = figure(title=None,
             plot_width=750,
             plot_height=300,
@@ -58,9 +58,10 @@ p1.axis.axis_line_color = None
 p1.axis.major_tick_line_color = None
 p1.axis.minor_tick_line_color = None
 p1.yaxis.axis_label = 'Price'
-p1.yaxis.axis_label_standoff = 3
+p1.yaxis.axis_label_standoff = 1
 p1.xaxis.formatter = xformatter
-p1.yaxis.formatter = PrintfTickFormatter(format='%8.2f')
+p1.yaxis.formatter = PrintfTickFormatter(format='%7.2f')
+p1.yaxis.major_label_text_font = 'courier'
 
 p2 = figure(title=None,
             plot_width=750,
@@ -91,6 +92,7 @@ p2.yaxis.axis_label = 'Basis Points'
 p2.yaxis.axis_label_standoff = ylabel_standoff
 p2.xaxis.formatter = xformatter
 p2.yaxis.formatter = yformatter
+p2.yaxis.major_label_text_font = 'courier'
 p2.x_range = p1.x_range
 
 p3 = figure(title=None,
@@ -124,11 +126,11 @@ p3.yaxis.axis_label_standoff = ylabel_standoff
 p3.xaxis.formatter = xformatter
 p3.yaxis.formatter = yformatter
 p3.xaxis.axis_label_standoff = 12
+p3.yaxis.major_label_text_font = 'courier'
 p3.x_range = p1.x_range
 
 vp = vplot(p1, p2, p3)
-push()
-
+# push()
 ip = load(urlopen('http://jsonip.com'))['ip']
 ssn = cursession()
 ssn.publish()
@@ -156,11 +158,11 @@ while True:
     ds_prices.data['y'] = prices
     ds_predictions.data['y'] = predictions
     ds_returns.data['y'] = returns
-    p2.yaxis.formatter = yformatter
-    p3.yaxis.formatter = yformatter
+    # p2.yaxis.formatter = yformatter
+    # p3.yaxis.formatter = yformatter
+    # vp = vplot(p1, p2, p3)
     ssn.store_objects(ds_prices)
     ssn.store_objects(ds_predictions)
     ssn.store_objects(ds_returns)
-    ssn.store_objects(p2)
-    ssn.store_objects(p3)
+    # ssn.store_objects(vp)
     time.sleep(1)
