@@ -131,11 +131,12 @@ push()
 
 ip = load(urlopen('http://jsonip.com'))['ip']
 ssn = cursession()
+ssn.publish()
 tag = embed.autoload_server(vp, ssn, public=True).replace('localhost', ip)
 
 with open('templates/index.html', 'r') as f:
     html = f.read()
-match = r"<script\s*src=\"http://52.16.234.158:5006/bokeh.*?</script>"
+match = r"<script\s*src=\"http://54.76.50.101:5006/bokeh.*?</script>"
 html = re.sub(match, tag, html, 1, re.DOTALL)
 with open('templates/index.html', 'w+') as f:
     f.write(html)
@@ -155,7 +156,11 @@ while True:
     ds_prices.data['y'] = prices
     ds_predictions.data['y'] = predictions
     ds_returns.data['y'] = returns
+    p2.yaxis.formatter = yformatter
+    p3.yaxis.formatter = yformatter
     ssn.store_objects(ds_prices)
     ssn.store_objects(ds_predictions)
     ssn.store_objects(ds_returns)
+    ssn.store_objects(p2)
+    ssn.store_objects(p3)
     time.sleep(1)
