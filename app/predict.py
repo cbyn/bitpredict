@@ -4,6 +4,7 @@ import time
 import sys
 import pickle
 import numpy as np
+from math import log
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -18,8 +19,10 @@ with open('model.pkl', 'r') as file2:
     model = pickle.load(file2)
 
 print 'Running...'
-active = False
+position = 0
 trade_time = 0
+change = 0
+previous_price = None
 while True:
     start = time.time()
     position = 0
@@ -36,24 +39,26 @@ while True:
         sys.exc_clear()
     else:
         if data.width.iloc[0] > 0:
-            if active:
+            if position != 0:
                 if start - trade_time >= 30:
-                    active = False
-            elif abs(pred) > threshold:
-                active = True
+                    position = 0
+            elif abs(pred) >= threshold:
                 trade_time = time.time()
                 position = np.sign(pred)
-            current_price = data.pop('mid').iloc[0]
+            price = data.pop('mid').iloc[0]
+            if previous_price:
+                change = log(price/previous_price)
             entry = {'prediction': pred,
-                     'current_price': current_price,
-                     'future_price': 0,
+                     'price': price,
+                     'change': change,
                      'position': position}
             predictions.update_one({'_id': data.index[0]},
                                    {'$setOnInsert': entry},
                                    upsert=True)
-            predictions.update_many({'_id': {'$gt': start-duration-.5,
-                                             '$lt': start-duration+.5}},
-                                    {'$set': {'future_price': current_price}})
+            previous_price = price
+            # predictions.update_many({'_id': {'$gt': start-duration-.5,
+            #                                  '$lt': start-duration+.5}},
+            #                         {'$set': {'future_price': current_price}})
     time_delta = time.time()-start
     if time_delta < 1.0:
         time.sleep(1-time_delta)

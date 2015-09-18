@@ -2,15 +2,12 @@ import pandas as pd
 import pymongo
 from bokeh.plotting import cursession, figure, output_server, push
 from bokeh.models.formatters import DatetimeTickFormatter, PrintfTickFormatter
-# from bokeh.models import LinearAxis, Range1d
-# from bokeh.models.widgets import layouts
 from bokeh.io import vplot
 from bokeh import embed
 from json import load
 from urllib2 import urlopen
 import time
 import re
-from math import log
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -23,19 +20,18 @@ def get_data():
     data = data.set_index('_id')
     data = data.sort_index(ascending=True)
     timestamps = pd.to_datetime(data.index, unit='s').to_series()
-    prices = data.current_price
+    prices = data.price
     predictions = data.prediction*10000
-    data.future_price.replace(0, data.current_price.iloc[-1], inplace=True)
-    actual = (data.future_price/data.current_price).apply(log)
-    returns = actual*data.position*10000
-    return timestamps, prices, predictions, returns.cumsum()
+    returns = (data.position*data.change).cumsum()*10000
+    return timestamps, prices, predictions, returns
 
 timestamps, prices, predictions, returns = get_data()
 output_server('short_charts')
 
 background = '#f2f2f2'
-label_standoff = 17
+ylabel_standoff = 10
 xformatter = DatetimeTickFormatter(formats=dict(minutes=["%H:%M"]))
+yformatter = PrintfTickFormatter(format="%+' 8.1f")
 p1 = figure(title=None,
             plot_width=750,
             plot_height=300,
@@ -45,14 +41,6 @@ p1 = figure(title=None,
             background_fill=background,
             tools='',
             toolbar_location=None)
-# p1.line(x=timestamps,
-#         y=(1+predictions)*prices,
-#         name='predictions',
-#         color='green',
-#         line_width=1,
-#         legend='30-Second Forecast',
-#         line_cap='round',
-#         line_join='round')
 p1.line(x=timestamps,
         y=prices,
         name='prices',
@@ -70,9 +58,9 @@ p1.axis.axis_line_color = None
 p1.axis.major_tick_line_color = None
 p1.axis.minor_tick_line_color = None
 p1.yaxis.axis_label = 'Price'
-p1.yaxis.axis_label_standoff = 10
+p1.yaxis.axis_label_standoff = 3
 p1.xaxis.formatter = xformatter
-p1.yaxis.formatter = PrintfTickFormatter(format='%6.2f')
+p1.yaxis.formatter = PrintfTickFormatter(format='%8.2f')
 
 p2 = figure(title=None,
             plot_width=750,
@@ -100,9 +88,9 @@ p2.axis.axis_line_color = None
 p2.axis.major_tick_line_color = None
 p2.axis.minor_tick_line_color = None
 p2.yaxis.axis_label = 'Basis Points'
-p2.yaxis.axis_label_standoff = label_standoff
+p2.yaxis.axis_label_standoff = ylabel_standoff
 p2.xaxis.formatter = xformatter
-p2.yaxis.formatter = PrintfTickFormatter(format='%+6.1f')
+p2.yaxis.formatter = yformatter
 p2.x_range = p1.x_range
 
 p3 = figure(title=None,
@@ -132,9 +120,10 @@ p3.axis.axis_line_color = None
 p3.axis.major_tick_line_color = None
 p3.axis.minor_tick_line_color = None
 p3.yaxis.axis_label = 'Basis Points'
-p3.yaxis.axis_label_standoff = label_standoff
+p3.yaxis.axis_label_standoff = ylabel_standoff
 p3.xaxis.formatter = xformatter
-p3.yaxis.formatter = PrintfTickFormatter(format='%+6.1f')
+p3.yaxis.formatter = yformatter
+p3.xaxis.axis_label_standoff = 12
 p3.x_range = p1.x_range
 
 vp = vplot(p1, p2, p3)
