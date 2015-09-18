@@ -16,7 +16,7 @@ else:
 
 df = pd.DataFrame(list(cursor))
 df = df[df.future_price != 0]
-df['actual'] = (df.future_price/df.current_price).apply(log)
+df['actual'] = (df.future_price/df.price).apply(log)
 score = r2_score(df.actual.values, df.prediction.values)
 print 'observations:', len(df)
 print 'r^2:', score
