@@ -37,7 +37,7 @@ p1 = figure(title=None,
             plot_height=300,
             x_axis_type='datetime',
             min_border_top=10,
-            min_border_bottom=0,
+            min_border_bottom=33,
             background_fill=background,
             tools='',
             toolbar_location=None)
@@ -62,13 +62,14 @@ p1.yaxis.axis_label_standoff = 1
 p1.xaxis.formatter = xformatter
 p1.yaxis.formatter = PrintfTickFormatter(format='%7.2f')
 p1.yaxis.major_label_text_font = 'courier'
+p1.xaxis.major_label_text_font = 'courier'
 
 p2 = figure(title=None,
             plot_width=750,
-            plot_height=200,
+            plot_height=295,
             x_axis_type='datetime',
-            min_border_top=11,
-            min_border_bottom=0,
+            min_border_top=5,
+            min_border_bottom=33,
             background_fill=background,
             tools='',
             toolbar_location=None)
@@ -93,14 +94,15 @@ p2.yaxis.axis_label_standoff = ylabel_standoff
 p2.xaxis.formatter = xformatter
 p2.yaxis.formatter = yformatter
 p2.yaxis.major_label_text_font = 'courier'
+p2.xaxis.major_label_text_font = 'courier'
 p2.x_range = p1.x_range
 
 p3 = figure(title=None,
             plot_width=750,
-            plot_height=200,
+            plot_height=320,
             x_axis_type='datetime',
-            min_border_top=11,
-            min_border_bottom=0,
+            min_border_top=5,
+            min_border_bottom=10,
             background_fill=background,
             x_axis_label='Greenwich Mean Time',
             tools='',
@@ -127,6 +129,7 @@ p3.xaxis.formatter = xformatter
 p3.yaxis.formatter = yformatter
 p3.xaxis.axis_label_standoff = 12
 p3.yaxis.major_label_text_font = 'courier'
+p3.xaxis.major_label_text_font = 'courier'
 p3.x_range = p1.x_range
 
 vp = vplot(p1, p2, p3)
