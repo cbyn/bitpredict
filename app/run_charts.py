@@ -33,6 +33,7 @@ def get_data():
 timestamps, prices, predictions, returns = get_data()
 output_server('short_charts')
 
+background = '#f2f2f2'
 xformatter = DatetimeTickFormatter(formats=dict(minutes=["%H:%M"]))
 p1 = figure(title=None,
             plot_width=750,
@@ -40,6 +41,7 @@ p1 = figure(title=None,
             x_axis_type='datetime',
             min_border_top=10,
             min_border_bottom=0,
+            background_fill=background,
             tools='',
             toolbar_location=None)
 # p1.line(x=timestamps,
@@ -53,15 +55,22 @@ p1 = figure(title=None,
 p1.line(x=timestamps,
         y=prices,
         name='prices',
-        # color='blue',
+        color='#4271ae',
         line_width=1,
         legend='Bitcoin Bid/Ask Midpoint',
         line_cap='round',
         line_join='round')
 p1.legend.orientation = 'top_left'
-p1.xaxis.formatter = xformatter
+p1.legend.border_line_color = background
+p1.outline_line_color = None
+p1.xgrid.grid_line_color = 'white'
+p1.ygrid.grid_line_color = 'white'
+p1.axis.axis_line_color = None
+p1.axis.major_tick_line_color = None
+p1.axis.minor_tick_line_color = None
 p1.yaxis.axis_label = 'Price'
 p1.yaxis.axis_label_standoff = 5
+p1.xaxis.formatter = xformatter
 p1.yaxis.formatter = NumeralTickFormatter(format="0.00")
 
 p2 = figure(title=None,
@@ -70,20 +79,28 @@ p2 = figure(title=None,
             x_axis_type='datetime',
             min_border_top=20,
             min_border_bottom=0,
+            background_fill=background,
             tools='',
             toolbar_location=None)
 p2.line(x=timestamps,
         y=predictions,
         name='predictions',
-        color='pink',
+        color='#c82829',
         line_width=1,
         legend='30 Second Prediction',
         line_cap='round',
         line_join='round')
 p2.legend.orientation = 'top_left'
-p2.xaxis.formatter = xformatter
+p2.legend.border_line_color = background
+p2.outline_line_color = None
+p2.xgrid.grid_line_color = 'white'
+p2.ygrid.grid_line_color = 'white'
+p2.axis.axis_line_color = None
+p2.axis.major_tick_line_color = None
+p2.axis.minor_tick_line_color = None
 p2.yaxis.axis_label = 'Basis Points'
 p2.yaxis.axis_label_standoff = 23
+p2.xaxis.formatter = xformatter
 p2.yaxis.formatter = NumeralTickFormatter(format="0.0")
 p2.x_range = p1.x_range
 
@@ -93,21 +110,29 @@ p3 = figure(title=None,
             x_axis_type='datetime',
             min_border_top=20,
             min_border_bottom=0,
+            background_fill=background,
             x_axis_label='Greenwich Time',
             tools='',
             toolbar_location=None)
 p3.line(x=timestamps,
         y=returns,
         name='returns',
-        color='purple',
+        color='#8959a8',
         line_width=1,
         legend='Cumulative Return',
         line_cap='round',
         line_join='round')
 p3.legend.orientation = 'top_left'
-p3.xaxis.formatter = xformatter
+p3.legend.border_line_color = background
+p3.outline_line_color = None
+p3.xgrid.grid_line_color = 'white'
+p3.ygrid.grid_line_color = 'white'
+p3.axis.axis_line_color = None
+p3.axis.major_tick_line_color = None
+p3.axis.minor_tick_line_color = None
 p3.yaxis.axis_label = 'Basis Points'
 p3.yaxis.axis_label_standoff = 23
+p3.xaxis.formatter = xformatter
 p3.yaxis.formatter = NumeralTickFormatter(format="0.0")
 p3.x_range = p1.x_range
 vp = vplot(p1, p2, p3)
