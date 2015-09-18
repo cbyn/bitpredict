@@ -1,7 +1,7 @@
 import pandas as pd
 import pymongo
 from bokeh.plotting import cursession, figure, output_server, push
-from bokeh.models import DatetimeTickFormatter, NumeralTickFormatter
+from bokeh.models.formatters import DatetimeTickFormatter, PrintfTickFormatter
 # from bokeh.models import LinearAxis, Range1d
 # from bokeh.models.widgets import layouts
 from bokeh.io import vplot
@@ -34,6 +34,7 @@ timestamps, prices, predictions, returns = get_data()
 output_server('short_charts')
 
 background = '#f2f2f2'
+label_standoff = 17
 xformatter = DatetimeTickFormatter(formats=dict(minutes=["%H:%M"]))
 p1 = figure(title=None,
             plot_width=750,
@@ -69,9 +70,9 @@ p1.axis.axis_line_color = None
 p1.axis.major_tick_line_color = None
 p1.axis.minor_tick_line_color = None
 p1.yaxis.axis_label = 'Price'
-p1.yaxis.axis_label_standoff = 5
+p1.yaxis.axis_label_standoff = 10
 p1.xaxis.formatter = xformatter
-p1.yaxis.formatter = NumeralTickFormatter(format="0.00")
+p1.yaxis.formatter = PrintfTickFormatter(format='%6.2f')
 
 p2 = figure(title=None,
             plot_width=750,
@@ -99,9 +100,9 @@ p2.axis.axis_line_color = None
 p2.axis.major_tick_line_color = None
 p2.axis.minor_tick_line_color = None
 p2.yaxis.axis_label = 'Basis Points'
-p2.yaxis.axis_label_standoff = 23
+p2.yaxis.axis_label_standoff = label_standoff
 p2.xaxis.formatter = xformatter
-p2.yaxis.formatter = NumeralTickFormatter(format="0.0")
+p2.yaxis.formatter = PrintfTickFormatter(format='%+6.1f')
 p2.x_range = p1.x_range
 
 p3 = figure(title=None,
@@ -131,12 +132,12 @@ p3.axis.axis_line_color = None
 p3.axis.major_tick_line_color = None
 p3.axis.minor_tick_line_color = None
 p3.yaxis.axis_label = 'Basis Points'
-p3.yaxis.axis_label_standoff = 23
+p3.yaxis.axis_label_standoff = label_standoff
 p3.xaxis.formatter = xformatter
-p3.yaxis.formatter = NumeralTickFormatter(format="0.0")
+p3.yaxis.formatter = PrintfTickFormatter(format='%+6.1f')
 p3.x_range = p1.x_range
-vp = vplot(p1, p2, p3)
 
+vp = vplot(p1, p2, p3)
 push()
 
 ip = load(urlopen('http://jsonip.com'))['ip']
