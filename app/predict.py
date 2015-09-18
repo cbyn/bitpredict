@@ -1,4 +1,4 @@
-from bitmicro.model import features as f
+from bitpredict.model import features as f
 import pymongo
 import time
 import sys
@@ -51,14 +51,15 @@ while True:
             entry = {'prediction': pred,
                      'price': price,
                      'change': change,
-                     'position': position}
+                     'position': position,
+                     'future_price': 0}
             predictions.update_one({'_id': data.index[0]},
                                    {'$setOnInsert': entry},
                                    upsert=True)
             previous_price = price
-            # predictions.update_many({'_id': {'$gt': start-duration-.5,
-            #                                  '$lt': start-duration+.5}},
-            #                         {'$set': {'future_price': current_price}})
+            predictions.update_many({'_id': {'$gt': start-duration-.5,
+                                             '$lt': start-duration+.5}},
+                                    {'$set': {'future_price': price}})
     time_delta = time.time()-start
     if time_delta < 1.0:
         time.sleep(1-time_delta)
