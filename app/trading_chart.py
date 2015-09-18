@@ -1,6 +1,6 @@
 import pandas as pd
 import pymongo
-from bokeh.plotting import cursession, figure, show, output_server
+from bokeh.plotting import cursession, figure, output_server, show
 import time
 from math import log
 
@@ -24,6 +24,7 @@ p1 = figure(title='Phony Returns',
             y_axis_label='Basis Points')
 p1.line(times, returns.cumsum(), name='all_returns')
 show(p1)
+
 renderer1 = p1.select(dict(name='all_returns'))
 ds1 = renderer1[0].data_source
 
