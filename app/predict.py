@@ -42,7 +42,7 @@ while True:
             if trade != 0:  # A trade happened in the previous second
                 position = trade
                 trade = 0
-            if position != 0 and (start - trade_time) >= 30:  # Time to exit
+            if position != 0 and (start - trade_time) >= 31:  # Position expired
                 position = 0
             if position == 0 and abs(pred) >= threshold:  # Execute new trade
                 trade_time = time.time()
