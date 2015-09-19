@@ -1,125 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-    <title>bitpredict.io</title>
-
-    <!-- Bootstrap Core CSS -->
-    <link href="{{url_for('static', filename='css/bootstrap.min.css')}}" rel="stylesheet">
-
-    <!-- Custom CSS -->
-    <link href="{{url_for('static', filename='css/portfolio-item.css')}}" rel="stylesheet">
-
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-    <![endif]-->
-
-</head>
-
-<body>
-
-    <!-- Navigation -->
-    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-        <div class="container">
-            <!-- Brand and toggle get grouped for better mobile display -->
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-            </div>
-            <!-- Collect the nav links, forms, and other content for toggling -->
-            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-	        <ul class="nav navbar-nav">
-	  	    <li>
-                        <a href="/">Live Activity</a>
-                    </li>
-                    <li>
-                        <a href="/extended">Extended Activity</a>
-                    </li>
-                    <li>
-                        <a href="https://github.com/cbyn/bitpredict.git">Learn More</a>
-                    </li>
-                </ul>
-            </div>
-            <!-- /.navbar-collapse -->
-        </div>
-        <!-- /.container -->
-    </nav>
-
-    <!-- Page Content -->
-    <div class="container">
-
-        <!-- Portfolio Item Heading -->
-        <div class="row">
-            <div class="col-lg-12">
-                <h1 class="page-header">bitpredict.io
-                    <small>Machine Learning for High Frequency Bitcoin Price Prediction</small>
-                </h1>
-            </div>
-        </div>
-        <!-- /.row -->
-
-        <!-- Portfolio Item Row -->
-        <div class="row">
-
-            <div class="col-md-8">
-    <script
-    src="http://54.76.50.101:5006/bokeh/autoload.js/e6e44ec3-5cda-44cc-9a90-262edb8cfb2a"
-    id="e6e44ec3-5cda-44cc-9a90-262edb8cfb2a"
+{% extends "layout.html" %}
+{% block bokeh %}
+<script
+    src="http://54.76.50.101:5006/bokeh/autoload.js/c88a61d6-c0ca-4ff0-8dc9-72068315c90b"
+    id="c88a61d6-c0ca-4ff0-8dc9-72068315c90b"
     async="true"
     data-bokeh-data="server"
-    data-bokeh-modelid="8be19652-3472-44a0-b392-187a0ed88221"
+    data-bokeh-modelid="42583c55-a575-4193-9186-bd1ee0bd007f"
     data-bokeh-root-url="http://54.76.50.101:5006/"
-    data-bokeh-docid="d9132b5e-4a5f-444a-840a-48466f7c383f"
+    data-bokeh-docid="a586bf4d-fb70-4671-a17b-b272a6253d3d"
     
     data-bokeh-public="true"
     
     data-bokeh-loglevel="info"
 ></script>
-            </div>
-
-            <div class="col-md-4">
-                <h3>Implementation</h3>
-		<p>At one second intervals, a trained model makes a 30 second price forecast using live order and trade data from the Bitfinex exchange.</p>
-		<p>Simulated trades are executed at a one basis point threshold and held for 30 seconds, with only one open position allowed at a time. Transaction costs are not considered.</p>
-		<p>Most of the price movements are too small to be profitable in practice; theoretical returns are calculated purely as measure of predictive performance.</p>
-            </div>
-
-        </div>
-
-        <hr>
-
-        <!-- Footer -->
-        <footer>
-            <div class="row">
-                <div class="col-lg-12">
-                </div>
-            </div>
-            <!-- /.row -->
-        </footer>
-
-    </div>
-    <!-- /.container -->
-
-    <!-- jQuery -->
-    <script src="js/jquery.js"></script>
-
-    <!-- Bootstrap Core JavaScript -->
-    <script src="js/bootstrap.min.js"></script>
-
-</body>
-
-</html>
+{% endblock %}

@@ -1,13 +1,12 @@
 import pandas as pd
 import pymongo
-from bokeh.plotting import cursession, figure, output_server
+from bokeh.plotting import cursession, figure, output_server, push
 from bokeh.models.formatters import DatetimeTickFormatter, PrintfTickFormatter
 from bokeh.io import vplot
 from bokeh import embed
 from json import load
 from urllib2 import urlopen
 import time
-import re
 
 client = pymongo.MongoClient()
 db = client['bitmicro']
@@ -26,12 +25,12 @@ def get_data():
     return timestamps, prices, predictions, returns
 
 timestamps, prices, predictions, returns = get_data()
-output_server('short_charts')
+output_server('bitpredict')
 
 background = '#f2f2f2'
 ylabel_standoff = 1
 xformatter = DatetimeTickFormatter(formats=dict(minutes=["%H:%M"]))
-yformatter = PrintfTickFormatter(format="%+7.1f")
+yformatter = PrintfTickFormatter(format="%7.1f")
 p1 = figure(title=None,
             plot_width=750,
             plot_height=300,
@@ -133,16 +132,18 @@ p3.xaxis.major_label_text_font = 'courier'
 p3.x_range = p1.x_range
 
 vp = vplot(p1, p2, p3)
-# push()
+push()
 ip = load(urlopen('http://jsonip.com'))['ip']
 ssn = cursession()
 ssn.publish()
 tag = embed.autoload_server(vp, ssn, public=True).replace('localhost', ip)
+html = """
+{%% extends "layout.html" %%}
+{%% block bokeh %%}
+%s
+{%% endblock %%}
+""" % tag
 
-with open('templates/index.html', 'r') as f:
-    html = f.read()
-match = r"<script\s*src=\"http://54.76.50.101:5006/bokeh.*?</script>"
-html = re.sub(match, tag, html, 1, re.DOTALL)
 with open('templates/index.html', 'w+') as f:
     f.write(html)
 
