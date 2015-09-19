@@ -19,13 +19,13 @@ with open('model.pkl', 'r') as file2:
     model = pickle.load(file2)
 
 print 'Running...'
+trade = 0
 position = 0
 trade_time = 0
 change = 0
 previous_price = None
 while True:
     start = time.time()
-    position = 0
     try:
         data = f.make_features(symbol,
                                1,
@@ -39,12 +39,14 @@ while True:
         sys.exc_clear()
     else:
         if data.width.iloc[0] > 0:
-            if position != 0:
-                if start - trade_time >= 30:
-                    position = 0
-            elif abs(pred) >= threshold:
+            if trade != 0:  # A trade happened in the previous second
+                position = trade
+                trade = 0
+            if position != 0 and (start - trade_time) >= 30:  # Time to exit
+                position = 0
+            if position == 0 and abs(pred) >= threshold:  # Execute new trade
                 trade_time = time.time()
-                position = np.sign(pred)
+                trade = np.sign(pred)
             price = data.mid.iloc[0]
             if price and previous_price:
                 change = log(price/previous_price)
@@ -53,12 +55,14 @@ while True:
             entry = {'prediction': pred,
                      'price': price,
                      'change': change,
+                     'trade': trade,
                      'position': position,
                      'future_price': 0}
             predictions.update_one({'_id': data.index[0]},
                                    {'$setOnInsert': entry},
                                    upsert=True)
             previous_price = price
+            # Put in future price to use for simple (non live) calculations
             predictions.update_many({'_id': {'$gt': start-duration-.5,
                                              '$lt': start-duration+.5}},
                                     {'$set': {'future_price': price}})
