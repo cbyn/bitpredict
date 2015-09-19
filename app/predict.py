@@ -45,9 +45,11 @@ while True:
             elif abs(pred) >= threshold:
                 trade_time = time.time()
                 position = np.sign(pred)
-            price = data.pop('mid').iloc[0]
-            if previous_price:
+            price = data.mid.iloc[0]
+            if price and previous_price:
                 change = log(price/previous_price)
+            else:
+                change = 0
             entry = {'prediction': pred,
                      'price': price,
                      'change': change,
