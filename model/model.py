@@ -43,8 +43,8 @@ def fit_forest(X, y, window=100000, estimators=100,
     return model.fit(X, y)
 
 
-def fit_boosting(X, y, window=100000, estimators=250, learning=.05,
-                 samples_leaf=250, depth=10, validate=False):
+def fit_boosting(X, y, window=100000, estimators=250, learning=.01,
+                 samples_leaf=500, depth=15, validate=False):
     '''
     Fits Gradient Boosting
     '''
