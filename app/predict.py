@@ -39,12 +39,15 @@ while True:
         sys.exc_clear()
     else:
         if data.width.iloc[0] > 0:
-            if trade != 0:  # A trade happened in the previous second
+            # If a trade happened in the previous second
+            if trade != 0:
                 position = trade
                 trade = 0
-            if position != 0 and (start - trade_time) >= 31:  # Position expired
+            # If an open position has expired
+            if position != 0 and (start - trade_time) >= duration+1:
                 position = 0
-            if position == 0 and abs(pred) >= threshold:  # Execute new trade
+            # If we can execute a new trade
+            if position == 0 and abs(pred) >= threshold:
                 trade_time = time.time()
                 trade = np.sign(pred)
             price = data.mid.iloc[0]
@@ -58,6 +61,7 @@ while True:
                      'trade': trade,
                      'position': position,
                      'future_price': 0}
+            # Set as mongo update so it doesn't blow up if data is not updating
             predictions.update_one({'_id': data.index[0]},
                                    {'$setOnInsert': entry},
                                    upsert=True)
