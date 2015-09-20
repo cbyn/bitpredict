@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
 import pickle
+import pandas as pd
 
 
 def cross_validate(X, y, model, window):
@@ -15,8 +16,6 @@ def cross_validate(X, y, model, window):
         train_index = np.arange(0, i*window)
         test_index = np.arange(i*window, (i+1)*window)
         y_train = y.take(train_index)
-        # non_zero = y_train != 0
-        # y_train[non_zero] = y_train[non_zero] - y_train[non_zero].mean()
         y_test = y.take(test_index)
         X_train = X.take(train_index, axis=0)
         X_test = X.take(test_index, axis=0)
@@ -44,12 +43,13 @@ def fit_forest(X, y, window=100000, estimators=100,
     return model.fit(X, y)
 
 
-def fit_boosting(X, y, window=100000, estimators=100,
-                 samples_leaf=250, depth=10, validate=True):
+def fit_boosting(X, y, window=100000, estimators=250, learning=.05,
+                 samples_leaf=250, depth=10, validate=False):
     '''
     Fits Gradient Boosting
     '''
     model = GradientBoostingRegressor(n_estimators=estimators,
+                                      learning_rate=learning,
                                       min_samples_leaf=samples_leaf,
                                       max_depth=depth,
                                       random_state=42)
@@ -114,3 +114,11 @@ def get_pickle(filename):
     with open(filename, 'r') as f:
         data = pickle.load(f)
     return data
+
+
+def append_data(df1, df2):
+    '''
+    Append df2 to df1
+    '''
+    df = pd.concat((df1, df2))
+    return df.groupby(df.index).first()
