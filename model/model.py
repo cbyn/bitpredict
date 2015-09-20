@@ -58,6 +58,29 @@ def fit_boosting(X, y, window=100000, estimators=250, learning=.05,
     return model.fit(X, y)
 
 
+def grid_search(X, y, split, learn=[.005, .01, .02], samples_leaf=[100, 250],
+                depth=[7, 10]):
+    '''
+    Runs a grid search for GBM on split data
+    '''
+    for l in learn:
+        for s in samples_leaf:
+            for d in depth:
+                model = GradientBoostingRegressor(n_estimators=250,
+                                                  learning_rate=l,
+                                                  min_samples_leaf=s,
+                                                  max_depth=d,
+                                                  random_state=42)
+                model.fit(X.values[:split], y.values[:split])
+                in_score = model.score(X.values[:split], y.values[:split])
+                out_score = model.score(X.values[split:], y.values[split:])
+                print 'learning_rate: {}, min_samples_leaf: {}, max_depth: {}'.\
+                    format(l, s, d)
+                print 'in-sample score:', in_score
+                print 'out-sample score:', out_score
+                print ''
+
+
 def run_models(data, window, model_function, drop_zeros=False):
     '''
     Runs cross-validated models with a range of target offsets and outputs
