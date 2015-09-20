@@ -58,8 +58,8 @@ def fit_boosting(X, y, window=100000, estimators=250, learning=.05,
     return model.fit(X, y)
 
 
-def grid_search(X, y, split, learn=[.005, .01, .02], samples_leaf=[100, 250],
-                depth=[7, 10]):
+def grid_search(X, y, split, learn=[.01], samples_leaf=[250, 350, 500],
+                depth=[10, 15]):
     '''
     Runs a grid search for GBM on split data
     '''
