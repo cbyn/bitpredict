@@ -22,8 +22,10 @@ while True:
     data = data.sort_index(ascending=True)
     returns = (data.position*data.change).sum()
     last_timestamp = data.index[-1]
-    performance.insert_one({'_id': last_timestamp,
-                            'returns': returns})
+    # Set as mongo update so it doesn't blow up if data is not updating
+    performance.update_one({'_id': last_timestamp},
+                           {'$setOnInsert': {'returns': returns}},
+                           upsert=True)
 
     time_delta = time.time()-start
     time.sleep(frequency-time_delta)

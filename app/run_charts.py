@@ -14,7 +14,7 @@ collection = db['btc_predictions']
 
 
 def get_data():
-    cursor = collection.find().limit(10*60).sort('_id', pymongo.DESCENDING)
+    cursor = collection.find().limit(9*60).sort('_id', pymongo.DESCENDING)
     data = pd.DataFrame(list(cursor))
     data = data.set_index('_id')
     data = data.sort_index(ascending=True)
@@ -28,9 +28,9 @@ timestamps, prices, predictions, returns = get_data()
 output_server('bitpredict')
 
 background = '#f2f2f2'
-ylabel_standoff = 1
+ylabel_standoff = 0
 xformatter = DatetimeTickFormatter(formats=dict(minutes=["%H:%M"]))
-yformatter = PrintfTickFormatter(format="%7.1f")
+yformatter = PrintfTickFormatter(format="%8.1f")
 p1 = figure(title=None,
             plot_width=750,
             plot_height=300,
@@ -57,9 +57,9 @@ p1.axis.axis_line_color = None
 p1.axis.major_tick_line_color = None
 p1.axis.minor_tick_line_color = None
 p1.yaxis.axis_label = 'Price'
-p1.yaxis.axis_label_standoff = 1
+p1.yaxis.axis_label_standoff = ylabel_standoff
 p1.xaxis.formatter = xformatter
-p1.yaxis.formatter = PrintfTickFormatter(format='%7.2f')
+p1.yaxis.formatter = PrintfTickFormatter(format='%8.2f')
 p1.yaxis.major_label_text_font = 'courier'
 p1.xaxis.major_label_text_font = 'courier'
 
@@ -162,11 +162,7 @@ while True:
     ds_prices.data['y'] = prices
     ds_predictions.data['y'] = predictions
     ds_returns.data['y'] = returns
-    # p2.yaxis.formatter = yformatter
-    # p3.yaxis.formatter = yformatter
-    # vp = vplot(p1, p2, p3)
     ssn.store_objects(ds_prices)
     ssn.store_objects(ds_predictions)
     ssn.store_objects(ds_returns)
-    # ssn.store_objects(vp)
     time.sleep(1)
