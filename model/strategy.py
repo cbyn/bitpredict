@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
+import matplotlib.ticker as mtick
 
 
 def fit_and_trade(data, cols, split, threshold):
@@ -42,14 +43,23 @@ def trade(X, y, index, model, threshold):
             trades[i] = np.sign(pred)
 
     returns = trades*y*100
-    mean_return = returns[trades != 0].mean()
+    trades_only = returns[trades != 0]
+    mean_return = trades_only.mean()
+    # winners = sum(trades_only > 0)*1./len(trades_only)
     profit = np.cumsum(returns)
     plt.figure(dpi=100000)
+    fig, ax = plt.subplots()
     plt.plot(index, profit)
-    plt.title('{}% Trade Threshold (No Transaction Costs)'
+    plt.title('Trading at Every {}% Prediction (No Transaction Costs)'
               .format(threshold*100))
-    plt.ylabel('Percent Returns')
+    plt.ylabel('Returns')
     plt.xticks(rotation=45)
-    print 'Average Return: {}'.format(mean_return)
-    print 'Total Trades: {}'.format(sum(trades != 0))
+    formatter = mtick.FormatStrFormatter('%.0f%%')
+    ax.yaxis.set_major_formatter(formatter)
+    return_text = 'Average Return: {:.4f} %'.format(mean_return)
+    trades_text = 'Total Trades: {:d}'.format(len(trades_only))
+    # winners_text = 'Winners: {:.2f} %'.format(winners*100)
+    plt.text(.05, .85, return_text, transform=ax.transAxes)
+    plt.text(.05, .78, trades_text, transform=ax.transAxes)
+    # plt.text(.05, .71, winners_text, transform=ax.transAxes)
     plt.show()
