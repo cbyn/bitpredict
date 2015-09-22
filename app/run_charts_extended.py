@@ -14,7 +14,7 @@ collection = db['btc_predictions']
 
 
 def get_data():
-    cursor = collection.find().limit(5*60*60).sort('_id', pymongo.DESCENDING)
+    cursor = collection.find().limit(3*60*60).sort('_id', pymongo.DESCENDING)
     data = pd.DataFrame(list(cursor))
     data = data.set_index('_id')
     data = data.sort_index(ascending=True)
