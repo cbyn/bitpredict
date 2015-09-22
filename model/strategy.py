@@ -29,7 +29,6 @@ def trade(X, y, index, model, threshold):
     print 'r-squared', model.score(X, y)
     preds = model.predict(X)
     trades = np.zeros(len(preds))
-    # active_widths = np.zeros(len(preds))
     count = 0
     active = False
     for i, pred in enumerate(preds):
@@ -42,9 +41,15 @@ def trade(X, y, index, model, threshold):
             active = True
             trades[i] = np.sign(pred)
 
-    returns = trades*y
+    returns = trades*y*100
     mean_return = returns[trades != 0].mean()
-    print 'average return', mean_return
     profit = np.cumsum(returns)
+    plt.figure(dpi=100000)
     plt.plot(index, profit)
+    plt.title('{}% Trade Threshold (No Transaction Costs)'
+              .format(threshold*100))
+    plt.ylabel('Percent Returns')
+    plt.xticks(rotation=45)
+    print 'Average Return: {}'.format(mean_return)
+    print 'Total Trades: {}'.format(sum(trades != 0))
     plt.show()
