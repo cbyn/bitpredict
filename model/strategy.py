@@ -45,7 +45,7 @@ def trade(X, y, index, model, threshold):
     returns = trades*y*100
     trades_only = returns[trades != 0]
     mean_return = trades_only.mean()
-    # winners = sum(trades_only > 0)*1./len(trades_only)
+    accuracy = sum(trades_only > 0)*1./len(trades_only)
     profit = np.cumsum(returns)
     plt.figure(dpi=100000)
     fig, ax = plt.subplots()
@@ -58,8 +58,8 @@ def trade(X, y, index, model, threshold):
     ax.yaxis.set_major_formatter(formatter)
     return_text = 'Average Return: {:.4f} %'.format(mean_return)
     trades_text = 'Total Trades: {:d}'.format(len(trades_only))
-    # winners_text = 'Winners: {:.2f} %'.format(winners*100)
+    accuracy_text = 'Accuracy: {:.2f} %'.format(accuracy*100)
     plt.text(.05, .85, return_text, transform=ax.transAxes)
     plt.text(.05, .78, trades_text, transform=ax.transAxes)
-    # plt.text(.05, .71, winners_text, transform=ax.transAxes)
+    plt.text(.05, .71, accuracy_text, transform=ax.transAxes)
     plt.show()
