@@ -36,7 +36,7 @@ p = figure(title=None,
            min_border_top=5,
            min_border_bottom=10,
            background_fill=background,
-           x_axis_label='Greenwich Mean Time',
+           x_axis_label='Date',
            tools='',
            toolbar_location=None)
 p.line(x=timestamps,
