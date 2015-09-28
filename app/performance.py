@@ -18,14 +18,15 @@ while True:
     query = {'_id': {'$gt': last_timestamp}}
     cursor = predictions.find(query).sort('_id', pymongo.DESCENDING)
     data = pd.DataFrame(list(cursor))
-    data = data.set_index('_id')
-    data = data.sort_index(ascending=True)
-    returns = (data.position*data.change).sum()
-    last_timestamp = data.index[-1]
-    # Set as mongo update so it doesn't blow up if data is not updating
-    performance.update_one({'_id': last_timestamp},
-                           {'$setOnInsert': {'returns': returns}},
-                           upsert=True)
+    if not data.empty:
+        data = data.set_index('_id')
+        data = data.sort_index(ascending=True)
+        returns = (data.position*data.change).sum()
+        last_timestamp = data.index[-1]
+        # Set as mongo update so it doesn't blow up if data is not updating
+        performance.update_one({'_id': last_timestamp},
+                               {'$setOnInsert': {'returns': returns}},
+                               upsert=True)
 
     time_delta = time.time()-start
     time.sleep(frequency-time_delta)
