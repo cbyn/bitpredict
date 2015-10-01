@@ -10,25 +10,25 @@ The target for prediction is the midpoint price 30 seconds in the future. The mi
 
 ## Features
 
-### Width
+#### Width
 This is the difference between the best bid price and best ask price.
 
-### Power Imbalance
+#### Power Imbalance
 This is a measure of imbalance between buy and sell orders. For each order, a weight is calculated as the inverse distance to the current midpoint price, raised to a power. Total weighted sell order volume is then subtracted from total weighted buy order volume. Powers of 2, 4, and 8 are used to create three separate features. 
 
-### Power Adjusted Price
+#### Power Adjusted Price
 This is similar to Power Imbalance, but the weighted distance to the current midpoint price (not inverted) is used for a weighted average of prices. The percent change from the current midpoint price to the weighted average is then calculated. Powers of 2, 4, and 8 are used to create three separate features. 
 
-### Trade Count
+#### Trade Count
 This is the number of trades in the previous X seconds. Offsets of 30, 60, 120, and 180 are used to create four separate features.
 
-### Trade Average
+#### Trade Average
 This is the percent change from the current midpoint price to the average of trade prices in the previous X seconds. Offsets of 30, 60, 120, and 180 are used to create four separate features.
 
-### Aggressor
+#### Aggressor
 This is measure of whether buyers or sellers were more aggressive in the previous X seconds. A buy aggressor is calculated as a trade where the buy order was more recent than the sell order. A sell aggressor is the reverse. The total volume created by sell aggressors is then subtracted from the total volume created by buy aggressors. Offsets of 30, 60, 120, and 180 are used to create four separate features.
 
-### Trend
+#### Trend
 This is the linear trend in trade prices over the previous X seconds. Offsets of 30, 60, 120, and 180 are used to create four separate features.
 
 ## Model
