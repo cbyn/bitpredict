@@ -6,7 +6,7 @@ This project aims to make high frequency bitcoin price predictions from market m
 A number of engineered features is used to train a Gradient Boosting model, and a naive theoretical trading strategy is simulated on historical and live data. Live results can be viewed at [bitpredict.io](http://bitpredict.io).
 
 ## Target
-The midpoint price 30 seconds in the future. The midpoint price is the average of the best bid price and the best ask price.
+The target for prediction is the midpoint price 30 seconds in the future. The midpoint price is the average of the best bid price and the best ask price.
 
 ## Features
 
