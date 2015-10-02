@@ -3,7 +3,7 @@
 ## Summary
 This project aims to make high frequency bitcoin price predictions from market microstructure data. The dataset is a series of one second snapshots of open buy and sell orders on the Bitfinex exchange, combined with a record of executed transactions. Data collection began 08/20/2015.
 
-A number of engineered features are used to train a Gradient Boosting model, and a naive theoretical trading strategy is simulated on historical and live data. Live results can be viewed at [bitpredict.io](http://bitpredict.io).
+A number of engineered features are used to train a Gradient Boosting model, and a naive theoretical trading strategy is simulated on historical and live data.
 
 ## Target
 The target for prediction is the midpoint price 30 seconds in the future. The midpoint price is the average of the best bid price and the best ask price.
