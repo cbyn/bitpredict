@@ -42,5 +42,3 @@ The results at different thresholds can be seen below. Three weeks of data are u
 ![Strategy with a 0.01% trading threshold.](images/strategy01.png)
 
 ![Strategy with a 0.05% trading threshold.](images/strategy05.png)
-
-![Strategy with a 0.10% trading threshold.](images/strategy10.png)
