@@ -3,7 +3,7 @@
 ## Summary
 This project aims to make high frequency bitcoin price predictions from market microstructure data. The dataset is a series of one second snapshots of open buy and sell orders on the Bitfinex exchange, combined with a record of executed transactions. Data collection began 08/20/2015.
 
-A number of engineered features are used to train a Gradient Boosting model, and a naive theoretical trading strategy is simulated on historical and live data.
+A number of engineered features are used to train a Gradient Boosting model, and a theoretical trading strategy is simulated on historical and live data.
 
 ## Target
 The target for prediction is the midpoint price 30 seconds in the future. The midpoint price is the average of the best bid price and the best ask price.
@@ -35,7 +35,7 @@ This is the linear trend in trade prices over the previous X seconds. Offsets of
 The above features are used to train a Gradient Boosting model. The model is validated using a shifting 100,000 second window where test data always occurs after training data. The length of training data accumulates with each successive iteration. Average out of sample R-squared is used as an evaluation metric. With four weeks of data, an out of sample R-squared of 0.0846 is achieved.
 
 ## Theoretical Trading Results
-A naive theoretical trading strategy is implemented to visualize model performance. At any model prediction above a threshold, a simulated position is initiated and held for 30 seconds, with only one position allowed at a time. Theoretical execution is done at the midpoint price without transaction costs.
+A theoretical trading strategy is implemented to visualize model performance. At any model prediction above a threshold, a simulated position is initiated and held for 30 seconds, with only one position allowed at a time. Theoretical execution is done at the midpoint price without transaction costs.
 
 The results at different thresholds can be seen below. Three weeks of data are used for training, with one week of data used for theoretical trading.
 
