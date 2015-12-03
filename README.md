@@ -34,7 +34,7 @@ This is the linear trend in trade prices over the previous X seconds. Offsets of
 ## Model
 The above features are used to train a Gradient Boosting model. The model is validated using a shifting 100,000 second window where test data always occurs after training data. The length of training data accumulates with each successive iteration. Average out of sample R-squared is used as an evaluation metric. With four weeks of data, an out of sample R-squared of 0.0846 is achieved.
 
-## Theoretical Trading Results
+## Backtest Results
 A theoretical trading strategy is implemented to visualize model performance. At any model prediction above a threshold, a simulated position is initiated and held for 30 seconds, with only one position allowed at a time. Theoretical execution is done at the midpoint price without transaction costs.
 
 The results at different thresholds can be seen below. Three weeks of data are used for training, with one week of data used for theoretical trading.
@@ -42,3 +42,8 @@ The results at different thresholds can be seen below. Three weeks of data are u
 ![Strategy with a 0.01% trading threshold.](images/strategy01.png)
 
 ![Strategy with a 0.05% trading threshold.](images/strategy05.png)
+
+## Live Results
+The model was run on live data and theoretical results were displayed on a web app. Performance with a 0.01% trading threshold can be seen below.
+
+![Live strategy with a 0.01% trading threshold.](images/live_results.png)
